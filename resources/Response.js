@@ -4,6 +4,7 @@ class Response {
     SERVER_SETTINGS;
     CONFIGURATION_LIST;
     HEADERS = [];
+
     constructor() {
         this.CONFIGURATION_LIST = {
             APP_URL: process.env.APP_URL,
@@ -15,6 +16,38 @@ class Response {
     static response(res) {
 
         return new Response();
+    }
+
+    static error(res, status, error = null) {
+        let data = {
+            'title': 'Page of Error'
+        }
+
+        if (typeof error == 'string')
+            data = Object.assign(data, { 'error_message': error })
+        else if (typeof error.message !== 'undefined')
+            data = Object.assign(data, { 'error_message': error.message })
+
+        if (typeof error.stack !== 'undefined')
+            data = Object.assign(data, { 'error_message': error.stack })
+
+        const object = {
+            'object': (data, status) => {
+                if (this.listConfigurations.APP_DEBUG)
+                    ((new Response()).view('error', status ?? 404, data)).renderResponse(res);
+                else
+                    ((new Response()).view('error', status ?? 404, data)).renderResponse(res);
+                return true;
+            },
+            'string': (data, status) => {
+                ((new Response()).view('error', status ?? 404, data)).renderResponse(res);
+                return true;
+            }
+        }
+
+        if (object[typeof error](data, status) !== true)
+            ((new Response()).view('error', 404, { title: "Page of Error" })).renderResponse(res);
+
     }
     view(file_dir, status = 200, data) {
 
@@ -65,12 +98,12 @@ class Response {
 }
 
 class ResponseType {
-    file
-    status
-    server_configuration
-    data
-    headers
-    type
+    file;
+    status;
+    server_configuration;
+    data;
+    headers;
+    type;
     constructor(type, file = null, status = null, server_configuration = null, data = null, headers = null) {
         this.type = type;
         this.file = file

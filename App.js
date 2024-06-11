@@ -58,16 +58,15 @@ class App {
                     response.renderResponse(res);
                 } catch (err) {
                     isError = !isError
-                    if (this.listConfigurations.APP_DEBUG == true)
-                        ((new Response()).view('error', 404, { error_message: err.message, error_stack: err.stack })).renderResponse(res);
-                    else
-                        ((new Response()).view('error', 404, { title: "Page of Error" })).renderResponse(res);
+                    Response.error(res, err)
+
                 }
             });
         });
-        await this.defineStorageRoutes();
 
+        await this.defineStorageRoutes();
     }
+    
     async defineStorageRoutes() {
         const Storage = require('./resources/Storage');
         const mime = require('mime-types');
@@ -110,7 +109,7 @@ class App {
                 }
                 return response;
             };
-            let filesUrl = await getFilesUrl(files, value, rootPath);
+            const filesUrl = await getFilesUrl(files, value, rootPath);
             if (filesUrl !== false)
                 for (const file of filesUrl) {
                     this.server.get(file.file_url, [upload.fields([])], async (req, res) => {
@@ -190,7 +189,7 @@ class App {
         this.requestLimiter();
         this.initCorsConfig();
         this.server.all('*', (req, res) => {
-            ((new Response()).view('error', 404, { title: "Page of Error" })).renderResponse(res);
+            Response.error(res, 404, 'Page Not Found');
         });
         this.server.listen(this.listConfigurations.APP_PORT, this.listConfigurations.APP_URL, (err) => {
             if (err)
