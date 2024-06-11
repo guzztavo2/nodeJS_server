@@ -13,11 +13,6 @@ class Response {
         this.SERVER_SETTINGS = this.CONFIGURATION_LIST['APP_URL'] + ":" + this.CONFIGURATION_LIST['APP_PORT'];
     }
 
-    static response(res) {
-
-        return new Response();
-    }
-
     static error(res, status, error = null) {
         let data = {
             'title': 'Page of Error'
