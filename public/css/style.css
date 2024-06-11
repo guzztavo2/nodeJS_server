@@ -1,0 +1,17 @@
+* {
+    box-sizing: border-box;
+    font-family: 'Roboto', sans-serif;
+    --azul: #8ECAE6;
+    --azul_1: #219EBC;
+    --azul_2: #023047;
+    --amarelo: #FFB703;
+    --laranja: #FB8500
+}
+.cursor-pointer{
+    cursor: pointer !important;
+}
+a{
+    text-decoration: none !important;
+}
+
+

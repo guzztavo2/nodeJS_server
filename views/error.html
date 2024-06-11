@@ -1,0 +1,21 @@
+<%- include('components/header'); %>
+<div style="text-shadow: 2px 2px 0px rgb(0, 0, 0); overflow:auto; " class="h-100 w-100 d-flex flex-column align-items-center justify-content-xl-center p-md-4 bg-danger ">
+  <% if(typeof error_message !== 'undefined') { %>
+
+  <div class="m-0 p-0 d-flex align-items-center justify-content-center w-100">
+    <h1 class="d-block fw-bolder display-1 text-light m-0 p-0"><%= statusCode %></h1>
+    <h6 class="d-block text-light m-0 mt-5 ms-2 p-0 text-break w-25"> <%= error_message %> </h6>
+  </div>
+
+  <div class="w-auto mt-4 p-0 d-flex justify-content-center  ">
+    <h6 style="overflow: auto; height: 50%;" class="border border-light d-block text-light m-0 p-0 col-md-6 col-sm-11 p-4 text-break text-wrap"> <%= error_stack %> </h6>
+  </div>
+  <%} else {%>
+  <div class="m-0 p-0 d-flex align-items-center justify-content-center w-100">
+    <h1 class="fw-bolder display-1 text-light m-0 p-0"><%= statusCode %></h1>
+    <h6 class="text-light m-0 mt-5 ms-2 p-0 text-break w-25">Não será possível acessar essa página no momento.</h6>
+  </div>
+  <% }%>
+</div>
+
+<%- include('components/foot'); %>

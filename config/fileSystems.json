@@ -1,0 +1,7 @@
+{
+  "public": {
+    "root": "/storage/",
+    "url": "/",
+    "visibility": "public"
+  }
+}
