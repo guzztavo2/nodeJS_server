@@ -7,8 +7,8 @@ class Response {
 
     constructor() {
         this.CONFIGURATION_LIST = {
-            APP_URL: process.env.APP_URL,
-            APP_PORT: process.env.APP_PORT
+            APP_URL: process.env.APP_URL == '' || typeof process.env.APP_URL !== 'string' ? 'localhost' : process.env.APP_URL,
+            APP_PORT: process.env.APP_PORT ?? 3000
         }
         this.SERVER_SETTINGS = this.CONFIGURATION_LIST['APP_URL'] + ":" + this.CONFIGURATION_LIST['APP_PORT'];
     }
