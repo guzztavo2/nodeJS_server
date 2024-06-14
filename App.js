@@ -137,20 +137,16 @@ class App {
     async checkMiddlewares(route) {
         const middlewares = [];
         if (route.middlewares && route.middlewares.length > 0)
-
             for (const middleware_ of route.middlewares) {
-
                 var pathMiddleware = File.getDirPath('middlewares');
                 let middlewaresFiles = await File.readFilesFromDirectory(pathMiddleware);
                 for (const value of middlewaresFiles) {
                     const middleware = require(pathMiddleware + '/' + value);
-
-                    if (middleware.identifier == middleware_)
+                    if (middleware.identifier == middleware_) {
                         middlewares.push(middleware.next);
-
+                    }
                 }
             }
-
         route.middlewares = middlewares;
         return route;
     }
