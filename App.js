@@ -37,13 +37,11 @@ class App {
     }
 
     async defineRoutes() {
-        this.serverReceiveDataConfiguration();
-        
         var isError = false;
         const routes_ = await this.readFilesRoutes();
         await this.getRoutes(routes_, (route) => {
             const controllerArray = typeof route.controller == 'string' && route.controller.length > 0 ? route.controller.split('::') : '';
-            this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares), async (req, res) => {
+            this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares, this.serverReceiveDataConfiguration()), async (req, res) => {
                 try {
                     const controller = this.findController(controllerArray[0]);
                     const response = await controller[controllerArray[1]](new Request(
@@ -176,13 +174,18 @@ class App {
     }
 
     serverReceiveDataConfiguration() {
-        this.server.use(bodyParser.json());
-        this.server.use(upload.array());
-        this.server.use(bodyParser.urlencoded({
+        return [bodyParser.json(),
+        upload.array(),
+        bodyParser.urlencoded({
             extended: false
-        }));
+        })];
     }
     initConfigServer() {
+
+        this.serverReceiveDataConfiguration().forEach(el => {
+            this.server.use(el)
+        });
+
         this.server.engine('html', require('ejs').renderFile);
         this.server.use(compression());
         this.server.set('view engine', 'html');

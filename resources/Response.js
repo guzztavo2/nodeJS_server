@@ -58,11 +58,11 @@ class Response {
 
 
     json(data, status = 200) {
-        return new ResponseType('json', null, status, null, Object.assign(this.dataToFront, data), this.HEADERS)
+        return new ResponseType('json', null, status, null, data, this.HEADERS)
     }
 
     data(data, status = 200) {
-        return new ResponseType('data', null, status, null, Object.assign(this.dataToFront, data), this.HEADERS);
+        return new ResponseType('data', null, status, null, data, this.HEADERS);
     }
 
     checkFile(file) {
