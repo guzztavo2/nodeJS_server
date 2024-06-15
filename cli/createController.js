@@ -33,7 +33,7 @@ if (fs.existsSync(path + controllerName + ".js")) {
 }
 try {
     fs.appendFileSync(path + controllerName + ".js",
-        `const Controller = require('../resources/Controller');\nclass ${controllerName} extends Controller{\nresponse;\n\nconstructor(configFile) {\nsuper(configFile);\n}\n \n }\n\nmodule.exports = ${controllerName};`, (err) => {
+        `const Controller = require('../resources/Controller');\nclass ${controllerName} extends Controller{\n\n\n}\n\nmodule.exports = ${controllerName};`, (err) => {
             console.log(err);
         });
 

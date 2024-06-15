@@ -37,6 +37,8 @@ class App {
     }
 
     async defineRoutes() {
+        this.serverReceiveDataConfiguration();
+        
         var isError = false;
         const routes_ = await this.readFilesRoutes();
         await this.getRoutes(routes_, (route) => {
@@ -166,21 +168,23 @@ class App {
     findController(controller) {
         try {
             const controllerPage = require('./controllers/' + controller);
-            return new controllerPage(this.listConfigurations);
+            return (new controllerPage().setConfigFile(this.listConfigurations));
         }
         catch (err) {
             throw new Error(err);
         }
     }
 
+    serverReceiveDataConfiguration() {
+        this.server.use(bodyParser.json());
+        this.server.use(upload.array());
+        this.server.use(bodyParser.urlencoded({
+            extended: false
+        }));
+    }
     initConfigServer() {
         this.server.engine('html', require('ejs').renderFile);
-        this.server.use(bodyParser.json());
         this.server.use(compression());
-        this.server.use(bodyParser.urlencoded({
-            extended: true
-        }));
-
         this.server.set('view engine', 'html');
         this.server.use('/public', express.static(Path.join(__dirname, 'public')));
         this.server.set('views', Path.join(__dirname, '/views'));

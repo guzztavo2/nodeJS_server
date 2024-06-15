@@ -3,12 +3,14 @@ class Controller {
     configFile = []
     response;
 
-
-    constructor(configFile) {
+    setConfigFile(configFile) {
         this.configFile = configFile;
         this.response = new Response();
+        this.response.dataToFront = {
+            'title': this.title
+        }
+        return this;
     }
-
 }
 
 module.exports = Controller;

@@ -4,7 +4,7 @@ class Response {
     SERVER_SETTINGS;
     CONFIGURATION_LIST;
     HEADERS = [];
-
+    dataToFront = {}
     constructor() {
         this.CONFIGURATION_LIST = {
             APP_URL: process.env.APP_URL == '' || typeof process.env.APP_URL !== 'string' ? 'localhost' : process.env.APP_URL,
@@ -20,15 +20,18 @@ class Response {
 
         if (typeof error == 'string')
             data = Object.assign(data, { 'error_message': error })
-        else if (typeof error.message !== 'undefined')
-            data = Object.assign(data, { 'error_message': error.message })
+        else if (error !== null && typeof error == 'object') {
+            if (typeof error.message !== 'undefined')
+                data = Object.assign(data, { 'error_message': error.message })
 
-        if (typeof error.stack !== 'undefined')
-            data = Object.assign(data, { 'error_message': error.stack })
+            if (typeof error.stack !== 'undefined')
+                data = Object.assign(data, { 'error_message': error.stack })
+        }
+
 
         const object = {
             'object': (data, status) => {
-                if (this.listConfigurations.APP_DEBUG)
+                if (typeof this.listConfigurations !== 'undefined' && this.listConfigurations.APP_DEBUG)
                     ((new Response()).view('error', status ?? 404, data)).renderResponse(res);
                 else
                     ((new Response()).view('error', status ?? 404, data)).renderResponse(res);
@@ -49,17 +52,17 @@ class Response {
         file_dir = this.checkFile(file_dir);
         return new ResponseType('view', file_dir, status,
             { HOME_URL: this.CONFIGURATION_LIST['APP_URL'] + ":" + this.CONFIGURATION_LIST['APP_PORT'] },
-            data, this.HEADERS
+            Object.assign(this.dataToFront, data), this.HEADERS
         );
     };
 
 
     json(data, status = 200) {
-        return new ResponseType('json', null, status, null, data, this.HEADERS)
+        return new ResponseType('json', null, status, null, Object.assign(this.dataToFront, data), this.HEADERS)
     }
 
     data(data, status = 200) {
-        return new ResponseType('data', null, status, null, data, this.HEADERS);
+        return new ResponseType('data', null, status, null, Object.assign(this.dataToFront, data), this.HEADERS);
     }
 
     checkFile(file) {
@@ -77,7 +80,7 @@ class Response {
 
     downloadFile(path_file, status = 200) {
         if (fs.existsSync(path_file)) {
-            return new ResponseType('download', null, status, null, data, this.HEADERS);
+            return new ResponseType('download', null, status, null, Object.assign(this.dataToFront, data), this.HEADERS);
         }
     }
 
@@ -96,7 +99,7 @@ class ResponseType {
     file;
     status;
     server_configuration;
-    data;
+    dataElements;
     headers;
     type;
     constructor(type, file = null, status = null, server_configuration = null, data = null, headers = null) {
@@ -104,7 +107,7 @@ class ResponseType {
         this.file = file
         this.status = status
         this.server_configuration = server_configuration
-        this.data = data
+        this.dataElements = data
         this.headers = headers
     }
 
@@ -123,22 +126,22 @@ class ResponseType {
 
         const response = {
             'view': () => {
-                if (this.data && this.data !== undefined)
-                    res.status(this.status).render(File.getDirPath(this.file), Object.assign(this.server_configuration, this.data, { statusCode: this.status }));
+                if (this.dataElements && this.dataElements !== undefined)
+                    res.status(this.status).render(File.getDirPath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
                 else
                     res.status(this.status).render(File.getDirPath(this.file), Object.assign(this.server_configuration, { statusCode: this.status }));
                 return true;
             },
             'json': () => {
-                res.status(this.status).json(JSON.stringify(this.data));
+                res.status(this.status).json(JSON.stringify(this.dataElements));
                 return true;
             },
             'data': () => {
-                res.status(this.status).send(this.data);
+                res.status(this.status).send(this.dataElements);
                 return true;
             },
             'download': () => {
-                res.status(this.status).download(this.data);
+                res.status(this.status).download(this.dataElements);
                 return true;
             },
         }
