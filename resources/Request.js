@@ -1,15 +1,44 @@
+const Session = require("./Session");
+
 class Request {
     requests = [];
 
+    request;
     quantity = 0;
-    constructor(requests) {
+
+    session;
+    constructor(request) {
+        this.request = request;
+
+        this.session = new Session(request);
+
+        const requests = Object.assign(
+            {
+                'url': request.url.indexOf('?') != -1 ? request.url.substring(0, request.url.indexOf('?')) : request.url,
+            },
+            request.body,
+            request.params,
+            request.query
+        );
+
         Object.keys(requests).forEach(key => {
             const value = requests[key];
             this.requests.push(new RequestType(key, value))
         });
+
         this.quantity = this.requests.length;
 
+        if (!this.request.session.views)
+            this.request.session.views = {
+                'before': this.request.url
+            }
+        else
+            this.request.session.views = Object.assign(this.request.session.views, {
+                'actual': this.request.url
+            })
+
     }
+
     insert(key, value) {
         request = new RequestType(key, value)
         this.quantity = this.requests.push(request);
@@ -30,6 +59,10 @@ class Request {
     }
     getAllRequests() {
         return this.requests;
+    }
+
+    session() {
+        return this.session;
     }
 }
 
