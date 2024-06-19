@@ -1,14 +1,8 @@
 
 class Session {
     request;
-    sessions;
     constructor(request) {
         this.request = request;
-
-        for (const session of request.session) {
-            console.log(session);
-        }
-        this.sessions = request.session;
     }
 
     create(key, value) {
@@ -16,14 +10,11 @@ class Session {
     }
 
     getByKey(key) {
-        return this.request.session[key];
-    }
-    static getByKey(request, key) {
-        return (new Session(request)).getByKey(key);
+        return this.request.session[key] ?? null;
     }
 
-    static create(request, key, value) {
-        return new Session(request).create(key, value);
+    all(){
+        return this.request.session;
     }
 }
 

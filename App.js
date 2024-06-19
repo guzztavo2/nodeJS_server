@@ -53,7 +53,7 @@ class App {
             this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares, this.serverReceiveDataConfiguration()), async (req, res) => {
                 try {
                     const request = new Request(req);
-                    const controller = this.findController(controllerArray[0]);
+                    const controller = this.findController(controllerArray[0], request);
                     const response = await controller[controllerArray[1]](request);
                     response.renderResponse(res);
                 } catch (err) {
@@ -125,8 +125,12 @@ class App {
         for (const key of keys) {
             const routes = routesFromFile[key]
             for (let route of routes) {
-                if (key !== 'web')
-                    route['url'] = route.url + key + '/';
+                if (key !== 'web') {
+                    if (route.url.length > 1)
+                        route['url'] = '/' + key + route.url + '/';
+                    else
+                        route['url'] = '/' + key + '/';
+                }
                 route = await this.checkMiddlewares(route);
                 callback(route);
             }
@@ -162,10 +166,10 @@ class App {
         return routes;
     }
 
-    findController(controller) {
+    findController(controller, request) {
         try {
             const controllerPage = require('./controllers/' + controller);
-            return (new controllerPage().setConfigFile(this.listConfigurations));
+            return (new controllerPage()).setConfigFile(this.listConfigurations, request);
         }
         catch (err) {
             throw new Error(err);

@@ -1,5 +1,6 @@
 const Session = require("./Session");
 
+
 class Request {
     requests = [];
 
@@ -27,16 +28,6 @@ class Request {
         });
 
         this.quantity = this.requests.length;
-
-        if (!this.request.session.views)
-            this.request.session.views = {
-                'before': this.request.url
-            }
-        else
-            this.request.session.views = Object.assign(this.request.session.views, {
-                'actual': this.request.url
-            })
-
     }
 
     insert(key, value) {
