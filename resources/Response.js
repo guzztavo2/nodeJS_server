@@ -18,6 +18,8 @@ class Response {
 
         if (session !== null)
             this.session = session;
+
+        
     }
 
     static error(res, status, error = null) {
@@ -60,8 +62,12 @@ class Response {
 
     back(data) {
         const before = this.session.getByKey('responses')['before'] ?? undefined;
+
+        if (data !== undefined)
+            this.session.create('responses', { 'data': data })
+        
         if (before !== undefined)
-            return new ResponseType('redirect', before, null, null, Object.assign(this.dataToFront, data), this.HEADERS);
+            return new ResponseType('redirect', before);
 
         return new ResponseType('redirect', '/', null, null, Object.assign(this.dataToFront, data), this.HEADERS);
     }
@@ -121,7 +127,7 @@ class ResponseType {
 
     renderResponse(res) {
         const setHeaders = (res, headers) => {
-            if (typeof headers == undefined || headers.length == 0)
+            if (headers == null || typeof headers == 'undefined' || headers.length == 0)
                 return;
 
             for (const header of headers) {

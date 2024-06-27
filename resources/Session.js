@@ -13,7 +13,12 @@ class Session {
         return this.request.session[key] ?? null;
     }
 
-    all(){
+    deleteByKey(key) {
+        if (this.request.session[key] !== undefined)
+            delete this.request.session[key];
+
+    }
+    all() {
         return this.request.session;
     }
 }
