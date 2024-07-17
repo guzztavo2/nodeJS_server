@@ -24,7 +24,7 @@ class Controller {
         const session = request.session.getByKey('responses') ?? {};
 
         session['before'] = session['actual'] ?? undefined;
-        session['actual'] = request.getByKey('url').value;
+        session['actual'] = request.actualUrl();
 
         request.session.create('responses', session)
     }

@@ -43,16 +43,17 @@ class App {
         this.server.use(express_session({
             secret: 'keyboard cat',
             resave: false,
-            saveUninitialized: true,
+            saveUninitialized: false,
             cookie: { secure: false }
         }))
+
 
         const routes_ = await this.readFilesRoutes();
         await this.getRoutes(routes_, (route) => {
             const controllerArray = typeof route.controller == 'string' && route.controller.length > 0 ? route.controller.split('::') : '';
             this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares, this.serverReceiveDataConfiguration()), async (req, res) => {
                 try {
-                    const request = new Request(req);
+                    const request = new Request(req, res);
                     const controller = this.findController(controllerArray[0], request);
                     const response = await controller[controllerArray[1]](request);
                     response.renderResponse(res);
@@ -207,7 +208,6 @@ class App {
                 throw (err);
             console.log("Server Started\nhttp://" + this.listConfigurations.APP_URL + ":" + this.listConfigurations.APP_PORT);
         });
-
 
     }
 

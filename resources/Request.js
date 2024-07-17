@@ -1,22 +1,23 @@
 const Session = require("./Session");
 const Validator = require("../resources/Validator").Validator;
-
+const Response = require("./Response");
 class Request {
     requests = [];
 
+    response;
     request;
     quantity = 0;
 
     session;
-    constructor(request) {
+    constructor(request, response = null) {
         this.request = request;
+
+        if (response !== null)
+            this.response = response;
 
         this.session = new Session(request);
 
         const requests = Object.assign(
-            {
-                'url': request.url.indexOf('?') != -1 ? request.url.substring(0, request.url.indexOf('?')) : request.url,
-            },
             request.body,
             request.params,
             request.query
@@ -30,6 +31,9 @@ class Request {
         this.quantity = this.requests.length;
     }
 
+    actualUrl() {
+        return this.request.url.indexOf('?') != -1 ? this.request.url.substring(0, this.request.url.indexOf('?')) : this.request.url
+    }
     insert(key, value) {
         request = new RequestType(key, value)
         this.quantity = this.requests.push(request);
@@ -65,9 +69,19 @@ class Request {
         return result;
     }
 
-    validate(validations, messages = null) {
+    async validate(validations, messages = null) {
         const data = this.requestsToObject();
-        (new Validator).make(data, validations, messages);
+        const result = await ((new Validator).make(data, validations, messages));
+        const response = new Response(this.session);
+
+        const backAction = response.back({ 'errors': result.errors });
+        if (result.isSuccess == false)
+            if (backAction)
+                backAction.renderResponse(this.response);
+            else
+                response.json({ 'errors': result.errors }, 200).renderResponse(this.response);
+
+        return result;
     }
 }
 

@@ -6,9 +6,9 @@ class Response {
     SERVER_SETTINGS;
     CONFIGURATION_LIST;
     HEADERS = [];
-    dataToFront = {}
-    session
-    response
+    dataToFront = {};
+    session;
+    response;
     constructor(session = null) {
         this.CONFIGURATION_LIST = {
             APP_URL: process.env.APP_URL == '' || typeof process.env.APP_URL !== 'string' ? 'localhost' : process.env.APP_URL,
@@ -18,8 +18,6 @@ class Response {
 
         if (session !== null)
             this.session = session;
-
-        
     }
 
     static error(res, status, error = null) {
@@ -60,16 +58,23 @@ class Response {
         );
     };
 
-    back(data) {
+    back(data = undefined) {
         const before = this.session.getByKey('responses')['before'] ?? undefined;
 
         if (data !== undefined)
             this.session.create('responses', { 'data': data })
-        
+
         if (before !== undefined)
             return new ResponseType('redirect', before);
 
-        return new ResponseType('redirect', '/', null, null, Object.assign(this.dataToFront, data), this.HEADERS);
+        return false;
+    }
+    redirect(url, data = undefined) {
+        if (data !== undefined)
+            this.session.create('responses', { 'data': data })
+
+    
+        return new ResponseType('redirect', url);
     }
     json(data, status = 200) {
         return new ResponseType('json', null, status, null, data, this.HEADERS)
@@ -126,6 +131,9 @@ class ResponseType {
     }
 
     renderResponse(res) {
+        if (res._headerSent)
+            return;
+
         const setHeaders = (res, headers) => {
             if (headers == null || typeof headers == 'undefined' || headers.length == 0)
                 return;
@@ -140,6 +148,9 @@ class ResponseType {
 
         const response = {
             'view': () => {
+                if (this.file == false)
+                    throw Error("View File Not Found");
+                
                 if (this.dataElements && this.dataElements !== undefined)
                     res.status(this.status).render(File.getDirPath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
                 else
@@ -147,7 +158,10 @@ class ResponseType {
                 return true;
             },
             'json': () => {
-                res.status(this.status).json(JSON.stringify(this.dataElements));
+                if (typeof this.dataElements !== 'object')
+                    res.status(this.status).json(JSON.stringify(this.dataElements));
+                else
+                    res.status(this.status).json(this.dataElements);
                 return true;
             },
             'data': () => {
@@ -163,8 +177,10 @@ class ResponseType {
                 return true;
             }
         }
-        if (response[this.type]() !== true)
+        if (Object.keys(response).indexOf(this.type) == -1 || response[this.type]() !== true)
             throw Error("Not possible execute this file");
+
+
         res.end();
     }
 }

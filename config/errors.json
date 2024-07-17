@@ -1,0 +1,22 @@
+{
+  "validator": {
+    "br": {
+      "required": "O campo %s é obrigatório",
+      "string": "O campo %s tem de ser em string.",
+      "int": "O campo %s tem de ser em inteiro.",
+      "float": "O campo %s tem de ser em float.",
+      "array": "O campo %s tem de ser em array.",
+      "object": "O campo %s tem de ser em objeto.",
+      "boolean": "O campo %s tem de ser em bool (0 ou 1, true ou false)."
+    },
+    "en": {
+      "required": "The field %s is required.",
+      "string": "The field %s must be a string.",
+      "int": "The field %s must be an integer.",
+      "float": "The field %s must be a float.",
+      "array": "The field %s must be an array.",
+      "object": "The field %s must be an object.",
+      "boolean": "The field %s must be a boolean (0 or 1, true or false).)."
+    }
+  }
+}
