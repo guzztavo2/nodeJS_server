@@ -2,62 +2,28 @@ const mysql = require('mysql');
 class MySql {
     connection; host; user; password; database;
 
-    ID_SQL_TYPES = {
-        "0": "DECIMAL",
-        "1": "TINYINT",
-        "2": "SMALLINT",
-        "3": "INT",
-        "4": "FLOAT",
-        "5": "DOUBLE",
-        "6": "NULL",
-        "7": "TIMESTAMP",
-        "8": "BIGINT",
-        "9": "MEDIUMINT",
-        "10": "DATE",
-        "11": "TIME",
-        "12": "DATETIME",
-        "13": "YEAR",
-        "14": "DATE",
-        "15": "VARCHAR",
-        "16": "BIT",
-        "245": "JSON",
-        "246": "DECIMAL(25,5)",
-        "247": "ENUM",
-        "248": "SET",
-        "249": "TINYBLOB",
-        "250": "MEDIUMBLOB",
-        "251": "LONGBLOB",
-        "252": "BLOB",
-        "253": "VARCHAR",
-        "254": "VARCHAR",
-        "255": "GEOMETRY"
-    }
-
     constructor() {
 
-        if (process.env.DB_TYPE === 'MySql') {
+        this.host = process.env.DB_HOST ?? null;
+        this.user = process.env.DB_USERNAME ?? null;
+        this.password = process.env.DB_PASSWORD ?? null;
+        this.database = process.env.DB_NAME ?? null;
 
-            this.host = process.env.DB_HOST ?? null;
-            this.user = process.env.DB_USERNAME ?? null;
-            this.password = process.env.DB_PASSWORD ?? null;
-            this.database = process.env.DB_NAME ?? null;
-
-            if (this.database == null)
-                this.connection = mysql.createConnection({
-                    host: this.host,
-                    user: this.user,
-                    password: this.password,
-                });
-            else {
-                this.connection = mysql.createConnection({
-                    host: this.host,
-                    user: this.user,
-                    password: this.password,
-                    database: this.database,
-                });
-            }
-        }
+        if (this.database == null)
+            this.connection = mysql.createConnection({
+                host: this.host,
+                user: this.user,
+                password: this.password,
+            });
+        else
+            this.connection = mysql.createConnection({
+                host: this.host,
+                user: this.user,
+                password: this.password,
+                database: this.database,
+            });
     }
+
     otherConnection(host, user, password, database = null) {
         this.host = host;
         this.user = user;
@@ -70,14 +36,13 @@ class MySql {
                 user: user,
                 password: password,
             });
-        else {
+        else
             this.connection = mysql.createConnection({
                 host: host,
                 user: user,
                 password: password,
                 database: database,
             });
-        }
     }
     createDatabase(database_name) {
         this.verifyConnection();
@@ -230,7 +195,6 @@ class MySql {
 
 
     async addConstraint(table_name, constraints) {
-
         const keys = Object.keys(constraints);
         let sql = '';
         for (const key of keys) {
@@ -241,18 +205,16 @@ class MySql {
 
                 switch (key) {
                     case 'before':
-
                         await this.getColumnType(table_name, props[0].column).then(async res => {
                             const values = await this.getPositions(table_name);
 
                             let result = values.filter(value => value['COLUMN_NAME'] == props[0].value);
-                            
+
                             if (result[0]['ORDINAL_POSITION'] == 1)
                                 sql += ` MODIFY ${props[0].column} ${res} FIRST`;
 
                             else {
                                 result = values.filter(value => value['ORDINAL_POSITION'] == (result[0]['ORDINAL_POSITION'] - 1))
-
                                 sql += ` MODIFY ${props[0].column} ${res} AFTER ${result[0]['COLUMN_NAME']}`
                             }
                         })
@@ -263,18 +225,15 @@ class MySql {
                         await this.getColumnType(table_name, props[0].column).then(res => {
                             sql += ` MODIFY ${props[0].column} ${res} AFTER ${props[0].value}`
                         })
-
                         break;
                     case 'unique':
                         sql += " ADD CONSTRAINT " + constraint_name + ` UNIQUE(${columns.join(',')}), `;
                         break;
-
                     case 'foreignKey':
                         props.map((prop) => {
                             sql += ` ADD FOREIGN KEY (${prop.column}) REFERENCES ${prop.value.references}(${prop.value.from}),`;
                         })
                         break;
-
                     case 'check':
                         let aux = '';
                         props.map((prop) => {
@@ -385,7 +344,5 @@ class MySql {
             "name": "varchar(255) NOT NULL"
         }).then().catch(err => { throw Error(err) });
     }
-
-
 }
 module.exports = MySql;

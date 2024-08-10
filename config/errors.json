@@ -7,7 +7,10 @@
       "float": "O campo %s tem de ser em float.",
       "array": "O campo %s tem de ser em array.",
       "object": "O campo %s tem de ser em objeto.",
-      "boolean": "O campo %s tem de ser em bool (0 ou 1, true ou false)."
+      "email": "O campo %s não é um e-mail válido.",
+      "boolean": "O campo %s tem de ser em bool (0 ou 1, true ou false).",
+      "min": "O campo %s ter ao menos a quantidade %c de caracteres.",
+      "max": "O campo %s ter no máximo a quantidade %c de caracteres."
     },
     "en": {
       "required": "The field %s is required.",
@@ -16,7 +19,10 @@
       "float": "The field %s must be a float.",
       "array": "The field %s must be an array.",
       "object": "The field %s must be an object.",
-      "boolean": "The field %s must be a boolean (0 or 1, true or false).)."
+      "email": "The field %s not a valid e-mail.",
+      "boolean": "The field %s must be a boolean (0 or 1, true or false).",
+      "min": "The field %s must be min (%c) length of characters.",
+      "max": "The field %s must be max (%c) length of characters."
     }
   }
 }

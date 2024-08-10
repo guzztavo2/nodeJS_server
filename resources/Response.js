@@ -180,7 +180,6 @@ class ResponseType {
         if (Object.keys(response).indexOf(this.type) == -1 || response[this.type]() !== true)
             throw Error("Not possible execute this file");
 
-
         res.end();
     }
 }

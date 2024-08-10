@@ -1,4 +1,5 @@
 const Encrypt = require('./Encrypt');
+const MySql = require('./MySql');
 
 class Model {
     typeModel;
@@ -6,6 +7,7 @@ class Model {
     setTypeModel() {
         if (this.typeModel == undefined)
             this.typeModel = new typeModel(this.table);
+
     }
 
     async first() {
@@ -95,6 +97,7 @@ class Model {
         }
         return this;
     }
+
     async verifyTypeOfKeys(object, keys) {
         const values = [];
         for (const key of keys) {
@@ -120,10 +123,11 @@ class Model {
 
     keyIsCast(key) {
         const castArray = this.getCastArray();
-        if (castArray.keys.includes(key)) {
+
+        if (castArray.keys.includes(key))
             return castArray.values[castArray.keys.indexOf(key)];
-        }
-        return false
+
+        return false;
     }
 
     getCastArray() {
@@ -136,13 +140,22 @@ class Model {
             return {
                 'keys': keys,
                 'values': values
-            }
+            };
         }
     }
 }
 
 class typeModel {
 
+    constructor() {
+        if (process.env.DB_TYPE === 'MySql')
+            return new typeModelMySql();
+
+    }
+
+}
+
+class typeModelMySql {
     connection_database;
     table;
     select_var = '';
@@ -151,7 +164,7 @@ class typeModel {
     limit_var = '';
 
     setConnection() {
-        this.connection_database = new (require('./MySql'))();
+        this.connection_database = new MySql();
     }
 
     getAllVars() {
@@ -162,14 +175,14 @@ class typeModel {
         this.setConnection()
     }
 
-    select(keys) {
-        if (keys == null)
+    select(keys = null) {
+        if (keys == null) {
             this.select_var = "SELECT " + this.keysToSQL().join(',') + " FROM " + this.table;
-        else {
-            keys = keys.map((val) => `'${val}'`);
-
-            this.select_var = "SELECT " + keys.join(',') + " FROM " + this.table;
+            return this;
         }
+        keys = keys.map((val) => `'${val}'`);
+        this.select_var = "SELECT " + keys.join(',') + " FROM " + this.table;
+
         return this;
     }
 
