@@ -182,6 +182,69 @@ class MySql {
             });
         });
     }
+    getForeignKeys(table = null, column = null, referenced_table_name = null, referenced_column_name = null) {
+        this.verifyConnection();
+
+        let sql = `SELECT * FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE`;
+
+        let keys = {
+            table: table ?? null,
+            column: column ?? null,
+            referenced_table_name: referenced_table_name ?? null,
+            referenced_column_name: referenced_column_name ?? null
+        };
+
+        let nowSql = false;
+        for (const [key, value] of Object.entries(keys)) {
+            if (value == null)
+                continue;
+            switch (key) {
+                case 'table':
+                    if (!nowSql) {
+                        sql += ` WHERE `
+                        nowSql = true;
+                    }
+                    else
+                        sql += ' AND '
+                    sql += `TABLE_NAME = '${value}'`
+                    break;
+                case 'column':
+                    if (!nowSql) {
+                        sql += ` WHERE `
+                        nowSql = true;
+                    }
+                    else
+                        sql += ' AND '
+                    sql += `COLUMN_NAME = '${value}'`;
+                    break;
+                case 'referenced_table_name':
+                    if (!nowSql) {
+                        sql += ` WHERE `
+                        nowSql = true;
+                    }
+                    else
+                        sql += ' AND '
+                    sql += `REFERENCED_TABLE_NAME = '${value}'`;
+                    break;
+                case 'referenced_column_name':
+                    if (!nowSql) {
+                        sql += ` WHERE `
+                        nowSql = true;
+                    }
+                    else
+                        sql += ' AND '
+                    sql += `REFERENCED_COLUMN_NAME = '${value}'`;
+                    break;
+            }
+        }
+        sql += ';'
+        return new Promise((res, error) => {
+            this.connection.query(sql, (err, result, fields) => {
+                if (err) error(err);
+                res(result);
+            });
+        });
+    }
     getPositions(table) {
         this.verifyConnection();
 
@@ -231,7 +294,7 @@ class MySql {
                         break;
                     case 'foreignKey':
                         props.map((prop) => {
-                            sql += ` ADD FOREIGN KEY (${prop.column}) REFERENCES ${prop.value.references}(${prop.value.from}),`;
+                            sql += ` ADD FOREIGN KEY (${prop.column}) REFERENCES ${prop.value.from}(${prop.value.references}),`;
                         })
                         break;
                     case 'check':

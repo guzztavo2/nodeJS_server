@@ -68,12 +68,12 @@ class Migration {
         return migration;
     }
     id() {
-        const migration = (new Column('id', "BIGINT", null)).autoIncrement(true).primaryKey(true).index(true);
+        const migration = (new Column('id', "BIGINT", null)).unsigned(true).autoIncrement(true).primaryKey(true).index(true);
         this.size = this.vars.push(migration);
         return migration;
     }
     foreignKey(var_name, references, from) {
-        const migration = (new Column(var_name, "BIGINT", null)).index(true).foreignKey(true, references, from);
+        const migration = (new Column(var_name, "BIGINT", null)).unsigned(true).foreignKey(true, references, from);
         this.size = this.vars.push(migration);
         return migration;
     }
