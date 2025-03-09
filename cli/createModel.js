@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { exit } = require('process');
 
 if (process.argv[2] == null) {
     console.log("\nModel's name it's necessary to create a Model.");
@@ -42,4 +43,6 @@ try {
 
 } catch (error) {
     console.log("\nNot possible create archive: " + modelName + "\nError:" + error + "\n");
+} finally{
+    exit(0);
 }

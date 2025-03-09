@@ -172,15 +172,17 @@ class Model {
         return this;
     }
     async first() {
+
         this.setTypeModel();
         const modelData = (await this.typeModel.limit(1).get())[0];
-        if(!modelData)
+        if (!modelData)
             return null;
         Object.entries(modelData).map(data => {
             const [key, value] = [data[0], data[1]];
             this[key] = value;
         });
         return this;
+
     }
 
     static create(object) {
@@ -358,8 +360,10 @@ class typeModelMySql {
         const innerJoin = this.innerJoin_var == '' ? '' : this.innerJoin_var;
         const query = select + innerJoin + where + orderBy + limit + ";";
         this.resetObjectValues();
+
         const resultQuery = await this.connection_database.raw(query);
         return Collection.createFromArrayObjects(resultQuery);
+
     }
 
     async first() {

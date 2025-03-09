@@ -42,4 +42,6 @@ try {
 
 } catch (error) {
     console.log("Not possible create archive: " + middlewareName + "\nError:" + error);
+} finally {
+    exit(0);
 }

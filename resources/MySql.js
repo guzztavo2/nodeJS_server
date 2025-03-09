@@ -391,10 +391,10 @@ class MySql {
         });
     }
     raw(query) {
-        return new Promise((res) => {
+        return new Promise((res, reject) => {
             this.connection.query(query, (err, result) => {
                 if (err)
-                    throw err;
+                    reject(err);
 
                 res(result);
             })

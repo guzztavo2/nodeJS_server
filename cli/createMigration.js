@@ -13,7 +13,7 @@ const stringTreatment = (string) => {
 
 const formatDate = () => {
     const now = new Date();
-    
+
     const YYYY = now.getFullYear();
     const MM = String(now.getMonth() + 1).padStart(2, '0'); // Mês começa do 0
     const DD = String(now.getDate()).padStart(2, '0');
@@ -73,7 +73,7 @@ const getRealPath = () => {
     return path;
 }
 
-if(actualPath != null)
+if (actualPath != null)
     var path = getRealPath() + actualPath;
 else
     var path = getRealPath();
@@ -93,4 +93,6 @@ try {
 
 } catch (error) {
     console.log("Not possible create archive: " + migrationName + "\n\nError:\n" + error);
+} finally {
+    exit(0);
 }
