@@ -1,5 +1,6 @@
 const fs = require('fs');
 const MySql = require('../resources/MySql');
+const { exit } = require('process');
 require('dotenv').config()
 
 console.log("You can pass dir's name to migrate:\n\tExample: node cli/migrate.js test/example/.\n\tResult Migration: migrations/test/example\n\n");
@@ -33,6 +34,8 @@ try {
 } catch {
     throw Error("\n\nNot possible examine this dir: \n" + folderMigration);
 }
+
+files = files.sort((a, b) => a < b ? -1 : 1)
 
 const mysql = new MySql();
 
@@ -180,10 +183,12 @@ async function createTableOrUpdate(mysql, migration) {
         console.log(err);
     });
 }
+
 useFiles(files, folderMigration, mysql).then(res => {
     console.log(`\n\nMigrate as successful, tables created in table database.\nCreated: ${res.length} tables`);
-    if (res.length > 0);
-    console.log(`\tList of files migrated:\n${res.join('\n')}\n`)
+    if (res.length > 0)
+        console.log(`\tList of files migrated:\n${res.join('\n')}\n`)
+
 }).catch(err => {
     throw Error(err);
-});
+}).finally(() => exit(0));
