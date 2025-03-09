@@ -23,16 +23,16 @@ class Response {
     static error(res, status, error = null) {
         let data = {
             'title': 'Page of Error'
-        }
+        };
 
         if (typeof error == 'string')
-            data = Object.assign(data, { 'error_message': error })
+            data = Object.assign(data, { 'error_message': error });
         else if (error !== null && typeof error == 'object') {
             if (typeof error.message !== 'undefined')
-                data = Object.assign(data, { 'error_message': error.message })
+                data = Object.assign(data, { 'error_message': error.message });
 
             if (typeof error.stack !== 'undefined')
-                data = Object.assign(data, { 'error_stack': error.stack })
+                data = Object.assign(data, { 'error_stack': error.stack });
         }
 
 
@@ -123,11 +123,11 @@ class ResponseType {
     type;
     constructor(type, file = null, status = null, server_configuration = null, data = null, headers = null) {
         this.type = type;
-        this.file = file
-        this.status = status
-        this.server_configuration = server_configuration
-        this.dataElements = data
-        this.headers = headers
+        this.file = file;
+        this.status = status;
+        this.server_configuration = server_configuration;
+        this.dataElements = data;
+        this.headers = headers;
     }
 
     renderResponse(res) {

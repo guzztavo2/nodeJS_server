@@ -11,7 +11,8 @@ class Controller {
             this.response.dataToFront = {
                 'title': this.title
             }
-        if (this.session.getByKey('responses') !== null && Object.keys(this.session.getByKey('responses')).indexOf('data') !== -1) {
+        if (this.session.getByKey('responses') !== null &&
+            Object.keys(this.session.getByKey('responses')).indexOf('data') !== -1) {
             this.response.dataToFront = Object.assign(this.response.dataToFront, this.session.getByKey('responses')['data']);
             this.session.deleteByKey('responses');
         }

@@ -5,7 +5,7 @@ if (process.argv[2] == null) {
     console.log("Example: node cli/User.js -- User created.\n");
     return;
 }
-const modelName = process.argv[2].toString();
+const modelName = process.argv[2].toString().replaceAll(/[^a-z{/}]/gm, "");
 const changeDirectory = () => {
     let directory = process.argv[1];
     directory = directory.split('/');

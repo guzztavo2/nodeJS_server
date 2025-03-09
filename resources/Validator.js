@@ -1,7 +1,7 @@
 const File = require("./File");
 
 class Validator {
-    errors = {}
+    errors = {};
     errors_messages = null;
     isSuccess = true;
 
@@ -27,9 +27,9 @@ class Validator {
                     if (result[key][valid[0]] == false) {
                         this.isSuccess = false;
                         if (messages !== null && typeof messages[key] !== 'undefined' && typeof messages[key][valid[0]] !== "undefined")
-                            this.addErrors(key, messages[key][valid[0]])
+                            this.addErrors(key, messages[key][valid[0]]);
                         else
-                            this.addErrors(key, await this.getErrorsMessages(valid[0], key))
+                            this.addErrors(key, await this.getErrorsMessages(valid[0], key));
                     }
                 }
                 else
@@ -37,16 +37,16 @@ class Validator {
                 if (result[key][valid] == false) {
                     this.isSuccess = false;
                     if (messages !== null && typeof messages[key] !== 'undefined' && typeof messages[key][valid] !== "undefined")
-                        this.addErrors(key, messages[key][valid])
+                        this.addErrors(key, messages[key][valid]);
                     else
-                        this.addErrors(key, await this.getErrorsMessages(valid, key))
+                        this.addErrors(key, await this.getErrorsMessages(valid, key));
                 }
             }
         return this;
     }
 
     addErrors(key, message) {
-        Object.assign(this.errors, { [key]: message })
+        Object.assign(this.errors, { [key]: message });
     }
 
     getValidation(data, key, validation, param = null) {
@@ -83,7 +83,7 @@ class Validator {
         if (this.errors_messages == null)
             this.errors_messages = JSON.parse(
                 (await File.readerFileData(File.getDirPath('./config/errors.json'))).toString())
-            ['validator'][process.env.LANGUAGE]
+            ['validator'][process.env.LANGUAGE];
 
         const errorMessage = this.errors_messages[column_validation].replace('%s', column_name);
         return errorMessage.replace('%c', param);

@@ -1,16 +1,29 @@
 class Collection {
     collection = [];
 
-    add(key, value) {
-        return this.collection.push((new typeCollection(key, value)));
+    constructor(array) {
+        this.collection = [];
+        if (!array)
+            return;
+        this.collection = this.createFromArrayObjects(array);
     }
-    map(func_){
+    add(key = null, value) {
+        if (!this.collection)
+            this.collection = [];
+        
+        const valuedKey = this.collection.length == 0 ? 0 : this.collection.length - 1;
+        key = key == null ? valuedKey : key;
+        const dataCreated = new typeCollection(key, value);
+        this[key] = dataCreated;
+        return this.collection.push(dataCreated);
+    }
+    map(func_) {
         return this.toArray().map(func_);
     }
     removeByKey(key) {
         const index = this.collection.findIndex((value) => {
             return (value.getKey()).indexOf(key) != -1;
-        })
+        });
 
         this.collection.splice(index, 1);
 
@@ -31,7 +44,7 @@ class Collection {
         })
     }
     findByValue(valueFind) {
-        if(typeof valueFind == 'function')
+        if (typeof valueFind == 'function')
             return this.collection.filter(valueFind);
         return this.collection.filter((value_, index_) => {
             const value = value_.getValue();
@@ -52,8 +65,11 @@ class Collection {
     }
 
     createFromArrayObjects(array_) {
+        if (!array_)
+            return;
         array_.map(value => {
-            const index = (this.add(this.collection.length, Object.assign({}, value)) - 1);
+            const index = (this.add(this.collection && this.collection.length ? this.collection.length : 0,
+                Object.assign({}, value)) - 1);
             this[index] = this.collection[index].getValue();
         })
     }
@@ -70,7 +86,7 @@ class Collection {
         })
     }
 
-    static toArray(collection){
+    static toArray(collection) {
         return collection.toArray();
     }
 }

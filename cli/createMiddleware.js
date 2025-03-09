@@ -5,7 +5,7 @@ if (process.argv[2] == null) {
     console.log("Example: node cli/createMiddleware.js UserVerification.");
     return;
 }
-const middlewareName = process.argv[2].toString();
+const middlewareName = process.argv[2].toString().replaceAll(/[^a-z{/}]/gm, "");
 const changeDirectory = () => {
     let directory = process.argv[1];
     directory = directory.split('/');

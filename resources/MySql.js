@@ -93,11 +93,11 @@ class MySql {
             keys.forEach((val) => {
                 const keyExist = existKeys.includes(val);
 
-                if (keyExist) {
+                if (keyExist)
                     sql += " MODIFY COLUMN " + val + " " + names_types[val] + ",";
-                } else {
-                    sql += " ADD " + val + " " + names_types[val] + ",";;
-                }
+                else
+                    sql += " ADD " + val + " " + names_types[val] + ",";
+
 
             })
             sql = sql.substring(0, sql.lastIndexOf(',')) + ";";

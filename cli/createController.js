@@ -5,7 +5,7 @@ if (process.argv[2] == null) {
     console.log("Example: node cli/createController.js HomeController.");
     return;
 }
-const controllerName = process.argv[2].toString();
+const controllerName = process.argv[2].toString().replaceAll(/[^a-z{/}]/gm, "");
 const changeDirectory = () => {
     let directory = process.argv[1];
     directory = directory.split('/');

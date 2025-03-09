@@ -5,18 +5,21 @@ console.log('\n\nYou can define name of your migration. \n');
 console.log("\tExample: node cli/migrate.js create_table_user. \n\n");
 
 const stringTreatment = (string) => {
+    string = string.trim();
     string = string.replaceAll(' ', '_');
     return string.replaceAll(':', '_');
 }
 let migrationName = process.argv[2] ?? null;
 
-let dateNow = DateTime.now();
+let modelName = "table_name_here";
+let dateNow = DateTime.now().toString();
 
 dateNow = stringTreatment(dateNow).replaceAll('/', '_');;
 
-if (migrationName == null) {
+if (migrationName == null)
     migrationName = dateNow;
-} else {
+else {
+    migrationName = migrationName.toString().replaceAll(/[^a-z{/}]/gm, "");
     try {
         if (migrationName.indexOf('/') !== -1) {
             const aux = migrationName.split('/').slice(0, migrationName.split('/').length - 1);
@@ -28,8 +31,8 @@ if (migrationName == null) {
         console.log("Not possible create migrations file. \n\n Error: " + error);
         return;
     }
-
-    migrationName = stringTreatment(migrationName) + dateNow;
+    modelName = stringTreatment(migrationName);
+    migrationName = stringTreatment(migrationName) + "_" + dateNow;
 }
 
 const changeDirectory = () => {
@@ -51,16 +54,16 @@ const getRealPath = () => {
     return path;
 }
 
-
 const path = getRealPath();
 
 if (fs.existsSync(path + migrationName + ".js")) {
     console.log("It is not possible to create a Migration with the same name as another.");
     return;
 }
+
 try {
     fs.appendFileSync(path + migrationName + ".js",
-        `const Migration = require("../resources/Migration");\n\nconst randomMigration = new class extends Migration {\n    table_name = "table_name";\n\n    create() {\n        return [\n            this.id()\n        ];\n    }\n}\n\nmodule.exports = randomMigration;`, (err) => {
+        `const Migration = require("../resources/Migration");\n\nconst randomMigration = new class extends Migration {\n    table_name = "${modelName}";\n\n    create() {\n        return [\n            this.id()\n        ];\n    }\n}\n\nmodule.exports = randomMigration;`, (err) => {
             console.log(err);
         });
 

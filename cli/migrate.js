@@ -11,13 +11,14 @@ const changeDirectory = () => {
     directory = directory.join('/');
     process.chdir(directory)
 }
+
 const getRealPath = () => {
     changeDirectory();
     const path = "../migrations/"
     try {
         fs.realpathSync(path);
     }
-    catch (error) {
+    catch {
         return "./migrations/";
     }
     return path;
@@ -80,26 +81,56 @@ const useFiles = async (files, folderMigration, mysql) => {
 
             const migrated = [];
 
-            for (n = 0; n < files.length; n++) {
-                const file = files[n];
+            let names = [];
 
-                let names = [];
+            await mysql.selectAll('migrations').then(res => {
+                if (res == 0) return;
 
-                await mysql.selectAll('migrations').then(res => {
+                names = res.map(val => val.name);
+            }).catch(err => { throw Error(err); });
 
-                    if (res == 0) return;
+            const executeMySql = async (mySql, migration, file) => {
+                try {
+                    await Promise.all([
+                        createTableOrUpdate(mySql, migration),
+                        mySql.insertValue('migrations', ['name'], [file])
+                    ]);
+                } catch (err) {
+                    console.log(err);
+                }
+            }
+            for (let n = 0; n < files.length; n++) {
+                const originalFile = files[n];
 
-                    names = res.map(val => val.name);
-                }).catch(err => { throw Error(err); });
-
-                if (names.length > 0 && names.includes(file))
+                if (names.length > 0 && names.includes(originalFile))
                     continue;
 
-                try {
-                    await createTableOrUpdate(mysql, folderMigration, file);
+                const migrationFile = require(folderMigration + originalFile);
 
-                    await mysql.insertValue('migrations', ['name'], [file]);
-                    migrated.push(file);
+                const foreignKeysReferences = ((migrationFile.create()).map(column => {
+                    if (column.foreignKey_var != false && column.foreignKey_var != undefined)
+                        return column.foreignKey_var['references'];
+                })).filter((value) => value != undefined);
+
+                for (let y = 0; y < files.length; y++) {
+                    const value = files[y];
+                    if (originalFile == value)
+                        continue;
+
+                    const migrationValue = require(folderMigration + value);
+                    if (migrated.indexOf(originalFile) !== -1)
+                        continue;
+
+                    if (foreignKeysReferences.indexOf(migrationValue.table_name) != -1) {
+                        await executeMySql(mysql, migrationValue, value);
+                        migrated.push(value);
+                    }
+                }
+                try {
+                    if (migrated.indexOf(originalFile) == -1) {
+                        await executeMySql(mysql, migrationFile, originalFile);
+                        migrated.push(originalFile);
+                    }
                 } catch (err) {
                     continue;
                 }
@@ -113,8 +144,8 @@ const useFiles = async (files, folderMigration, mysql) => {
 
 }
 
-async function createTableOrUpdate(mysql, folderMigration, file) {
-    const migration = require(folderMigration + file);
+async function createTableOrUpdate(mysql, migration) {
+
     let constraints = {
         unique: [],
         foreignKey: [],
@@ -124,7 +155,6 @@ async function createTableOrUpdate(mysql, folderMigration, file) {
         after: []
     };
     await mysql.verifyTableExist(migration.table_name).then(async res => {
-
         const checkConstraints = (el) => {
             if (el.check_var)
                 constraints.check = constraints.check.concat({ column: el.name, value: (el.check_var) });
@@ -140,20 +170,20 @@ async function createTableOrUpdate(mysql, folderMigration, file) {
                 constraints.before = constraints.before.concat({ column: el.name, value: (el.before_var) });
         }
         if (res == false)
-            createTable(migration.create(), mysql, migration, (el) => checkConstraints(el));
+            await createTable(migration.create(), mysql, migration, (el) => { checkConstraints(el) });
         else
-            alterTable(migration.create(), mysql, migration, (el) => checkConstraints(el));
+            await alterTable(migration.create(), mysql, migration, (el) => { checkConstraints(el) });
 
-        await mysql.addConstraint(migration.table_name, constraints)
+        await mysql.addConstraint(migration.table_name, constraints);
 
     }).catch(err => {
-        throw Error(err);
+        console.log(err);
     });
 }
 useFiles(files, folderMigration, mysql).then(res => {
     console.log(`\n\nMigrate as successful, tables created in table database.\nCreated: ${res.length} tables`);
-    if (res.length > 0)
-        console.log(`\tList of files migrated:\n${res.join('\n')}\n`)
+    if (res.length > 0);
+    console.log(`\tList of files migrated:\n${res.join('\n')}\n`)
 }).catch(err => {
     throw Error(err);
 });

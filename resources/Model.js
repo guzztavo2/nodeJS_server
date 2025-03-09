@@ -174,6 +174,8 @@ class Model {
     async first() {
         this.setTypeModel();
         const modelData = (await this.typeModel.limit(1).get())[0];
+        if(!modelData)
+            return null;
         Object.entries(modelData).map(data => {
             const [key, value] = [data[0], data[1]];
             this[key] = value;
