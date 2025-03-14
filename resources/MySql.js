@@ -120,9 +120,9 @@ class MySql {
 
         let sql = "INSERT INTO " + table + " (" + keys.join(",") + ") VALUES (" + values.join(",") + ")";
 
-        return new Promise((res) => {
+        return new Promise((res, reject) => {
             this.connection.query(sql, function (err, result) {
-                if (err) throw err;
+                if (err) reject(err);
                 res(result);
             });
         })
@@ -152,6 +152,8 @@ class MySql {
             if (keys == null)
                 this.connection.query("SELECT * FROM " + table, (err, result, fields) => {
                     if (err) error(err);
+                    if(!fields)
+                        return [];
                     res(fields.map((value) => value.name));
                 });
             else
