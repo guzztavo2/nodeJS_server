@@ -9,6 +9,7 @@ class Response {
     dataToFront = {};
     session;
     response;
+    
     constructor(session = null) {
         this.CONFIGURATION_LIST = {
             APP_URL: process.env.APP_URL == '' || typeof process.env.APP_URL !== 'string' ? 'localhost' : process.env.APP_URL,

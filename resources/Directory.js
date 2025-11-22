@@ -34,16 +34,14 @@ class Directory {
     }
 
     static async isDirectory(fileDir) {
-        let result = false;
-        await (new Promise((res, error) => {
+        return (new Promise((res, error) => {
             fs.stat(fileDir, (err, stats) => {
                 if (err)
                     error(err);
                 else
                     res(stats.isDirectory())
             });
-        })).then(res => { result = res; });
-        return result;
+        })).then(res => { return res; }).catch(err => { throw err; });
     }
 
     static getAbsolutePath(dir) {
@@ -51,36 +49,33 @@ class Directory {
     }
 
     static async readDirectory(dir) {
-        let files_;
-        await ((new Promise((res) => {
+        return (new Promise((res) => {
             fs.readdir(dir, (err, files) => {
                 if (err) throw err;
                 res(files);
             });
-        })).then(res => {
-            files_ = res;
-        })).catch(err => {
+        })).then(async res => {
+            const collection = new Collection();
+            
+            await Collection.createFromArrayObjects(res).map(async (val, key) => {
+                const file = dir + "/" + val.getValue();
+                if (file instanceof Directory || file instanceof File)
+                    return "continue";
+
+                const file_name = file.substring(file.lastIndexOf(Path.sep) + 1);
+
+                if (await File.isFile(Directory.getAbsolutePath(file)))
+                    collection.add(new File(file_name, Directory.getAbsolutePath(file)))
+                else if (await Directory.isDirectory(Directory.getAbsolutePath(file)))
+                    collection.add(new Directory(file_name, Directory.getAbsolutePath(file)));
+                else
+                    throw new Error('Unknown file system object: ' + file);
+            });
+
+            return collection;
+        }).catch(err => {
             throw err;
         });
-
-        const collection = new Collection();
-
-        await Collection.createFromArrayObjects(files_).map(async (val, key) => {
-            const file = val.getValue();
-            if (file instanceof Directory || file instanceof File)
-                return "continue";
-
-            const file_name = file.substring(file.lastIndexOf(Path.sep) + 1);
-
-            if (await File.isFile(Directory.getAbsolutePath(file)))
-                collection.add(new File(file_name, Directory.getAbsolutePath(file)))
-            else if (await Directory.isDirectory(Directory.getAbsolutePath(file)))
-                collection.add(new Directory(file_name, Directory.getAbsolutePath(file)));
-            else
-                throw new Error('Unknown file system object: ' + file);
-        });
-
-        return collection;
     }
 }
 

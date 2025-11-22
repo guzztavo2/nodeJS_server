@@ -29,6 +29,11 @@ class Encrypt {
     static async check_(value, value_1) {
         return await new Encrypt().check(value, value_1);
     }
+
+    static generateString(size = 20) {
+        const crypto = require('node:crypto');
+        return crypto.randomBytes(size).toString('hex').slice(0, size);
+    }
 }
 
 module.exports = Encrypt;

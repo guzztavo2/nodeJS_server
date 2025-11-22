@@ -20,6 +20,10 @@ class File {
         this.fileName = fileName;
     }
 
+    getAbsolutePath() {
+        return Path.resolve(this.path, this.fileName);
+    }
+
     getPath() {
         return this.path;
     }
@@ -34,35 +38,30 @@ class File {
     }
 
     static async isFile(fileDir) {
-        let result = false;
-        await (new Promise((res, error) => {
+        return (new Promise((res, error) => {
             fs.stat(fileDir, (err, stats) => {
                 if (err)
                     error(err);
                 else
                     res(stats.isFile())
             });
-        })).then(res => { result = res; });
-        return result;
+        })).then(res => { return res; })
+            .catch(err => { throw err; });
     }
 
     static async readData(path) {
-        let files_;
-
-        await (new Promise((res, rej) => {
+        return (new Promise((res, rej) => {
             fs.readFile(path, (err, data) => {
                 if (err)
                     rej(err);
                 else
                     res(data);
             })
-        }).then(data => {
-            files_ = data;
+        })).then(data => {
+            return data;
         }).catch(err => {
             throw err;
-        }));
-
-        return files_;
+        });
     }
 
     delete(directory) {
@@ -70,7 +69,20 @@ class File {
     }
 
     static async createFile(path, data) {
-        return (new Promise(fs.writeFileSync(path, data))).then(() => true).catch(() => false);
+        return (new Promise((res, err) => {
+            try {
+                res(fs.writeFileSync(path, data));
+            } catch (e) {
+                err(e);
+            }
+        })).then(() => {
+            if (this.isFile(path))
+                return true;
+            return false;
+        }).catch((e) => {
+            throw new Error('Error creating file - ' + e.message);
+        });
+
     }
 
     static fileExists(path) {

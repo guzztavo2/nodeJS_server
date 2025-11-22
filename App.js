@@ -6,27 +6,21 @@ const multer = require('multer');
 const MySql = require('./resources/MySql');
 const upload = multer();
 const Response = require('./resources/Response');
-require('dotenv').config()
 const compression = require("compression");
 const File = require('./resources/File');
 const Directory = require('./resources/Directory');
 const express_session = require('express-session');
-
+const Encrypt = require('./resources/Encrypt');
+const Collection = require('./resources/Collection');
 class App {
-    listConfigurations;
+    envConfigurations;
     server;
     async startServer() {
         this.createServer();
         await this.createConfigurations();
-        try {
-            await Promise.all([
-                this.defineRoutes(),
-                this.initConfigServer(),
-                this.migrationTable(),
-            ]);
-        } catch (error) {
-            console.error(error);
-        }
+        await this.defineRoutes();
+        this.initConfigServer();
+        await this.migrationTable();
     }
 
     createServer() {
@@ -34,33 +28,41 @@ class App {
             this.server = express();
         return this.server;
     }
-
-    async createConfigurations() {
+    async checkEnv() {
         if (!File.fileExists(Directory.getAbsolutePath('./.env'))) {
-            // const data = await File.readData(File.getPath('./.env-example'));
-            const data = await Directory.readDirectory(Directory.getAbsolutePath('./'));
-            console.log(data);
+            let data = (await File.readData(Directory.getAbsolutePath('./.env-example'))).toString();
+            data = data.replace('APP_SECRET=', "APP_SECRET=" + Encrypt.generateString(40));
+            if (!await File.createFile(Directory.getAbsolutePath('./.env'), data))
+                throw new Error('Error creating .env file from .env-example');
+            require('dotenv').config();
         }
-        if (this.listConfigurations == undefined)
-            this.listConfigurations = {
-                APP_URL: process.env.APP_URL == '' || typeof process.env.APP_URL !== 'string' ? 'localhost' : process.env.APP_URL,
-                APP_PORT: process.env.APP_PORT ?? 3000,
+    }
+    async createConfigurations() {
+        await this.checkEnv();
+        if (this.envConfigurations == undefined)
+            this.envConfigurations = {
+                APP_NAME: process.env.APP_NAME,
+                APP_SECRET: process.env.APP_SECRET,
+                APP_URL: process.env.APP_URL,
+                APP_PORT: process.env.APP_PORT,
                 DB_TYPE: process.env.DB_TYPE,
                 APP_DEBUG: process.env.APP_DEBUG == 'true' ? true : false,
                 APP_ENV: process.env.APP_ENV
             };
     }
-    async defineRoutes() {
-        var isError = false;
 
+    expressSession() {
         this.server.use(express_session({
-            secret: 'keyboard cat',
+            secret: this.envConfigurations.APP_SECRET,
             resave: false,
             saveUninitialized: false,
-            cookie: { secure: false }
-        }))
+            cookie: { secure: this.envConfigurations.APP_ENV === 'production' }
+        }));
+    }
 
-
+    async defineRoutes() {
+        this.expressSession();
+        var isError = false;
         const routes_ = await this.readFilesRoutes();
         await this.getRoutes(routes_, (route) => {
             const controllerArray = typeof route.controller == 'string' && route.controller.length > 0 ? route.controller.split('::') : '';
@@ -137,19 +139,23 @@ class App {
 
     }
     async getRoutes(routesFromFile, callback) {
-        const keys = Object.keys(routesFromFile);
+        await routesFromFile.map(async (val, key) => {
+            const key_ = val.getKey();
+            const route = val.getValue();
+
+            if (key_ !== 'web')
+                if (route.url.length > 1)
+                    route['url'] = '/' + key_ + route.url + '/';
+                else
+                    route['url'] = '/' + key_ + '/';
+
+            route = await this.checkMiddlewares(route);
+            callback(route);
+        });
+        const keys = Object.keys(routesFromFile.toArray());
         for (const key of keys) {
             const routes = routesFromFile[key]
-            for (let route of routes) {
-                if (key !== 'web') {
-                    if (route.url.length > 1)
-                        route['url'] = '/' + key + route.url + '/';
-                    else
-                        route['url'] = '/' + key + '/';
-                }
-                route = await this.checkMiddlewares(route);
-                callback(route);
-            }
+
         }
     }
 
@@ -157,7 +163,7 @@ class App {
         const middlewares = [];
         if (route.middlewares && route.middlewares.length > 0)
             for (const middleware_ of route.middlewares) {
-                var pathMiddleware = File.getDirPath('middlewares');
+                var pathMiddleware = Directory.getAbsolutePath('middlewares');
                 let middlewaresFiles = await File.readFilesFromDirectory(pathMiddleware);
                 for (const value of middlewaresFiles) {
                     const middleware = require(pathMiddleware + '/' + value);
@@ -171,13 +177,16 @@ class App {
     }
 
     async readFilesRoutes() {
-        var routePath = File.getDirPath('routes');
-        const files = await File.readFilesFromDirectory(routePath);
-        const routes = [];
-        for (const file of files)
-            if (file.substring(0, file.indexOf('.')) !== '')
-                routes[file.substring(0, file.indexOf('.'))] = JSON.parse(await File.readerFileDataToString(Path.join('/', routePath + '/' + file)));
+        const routePath = Directory.getAbsolutePath('routes');
+        const files = await Directory.readDirectory(routePath);
+        const routes = new Collection();
 
+        await files.map(async (val, key) => {
+            const file = val.getValue();
+            const route = file.getFileName().substring(0, file.getFileName().indexOf('.'));
+            if (route)
+                routes.add(JSON.parse(await File.readData(file.getAbsolutePath()))[0], route);
+        });
 
         return routes;
     }
@@ -185,7 +194,7 @@ class App {
     findController(controller, request) {
         try {
             const controllerPage = require('./controllers/' + controller);
-            return (new controllerPage()).setConfigFile(this.listConfigurations, request);
+            return (new controllerPage()).setConfigFile(this.envConfigurations, request);
         }
         catch (err) {
             throw new Error(err);
@@ -220,10 +229,10 @@ class App {
         this.server.all('*', (req, res) => {
             Response.error(res, 404, 'Page Not Found');
         });
-        this.server.listen(this.listConfigurations.APP_PORT, this.listConfigurations.APP_URL, (err) => {
+        this.server.listen(this.envConfigurations.APP_PORT, this.envConfigurations.APP_URL, (err) => {
             if (err)
                 throw (err);
-            console.log("Server Started\nhttp://" + this.listConfigurations.APP_URL + ":" + this.listConfigurations.APP_PORT);
+            console.log("Server Started\nhttp://" + this.envConfigurations.APP_URL + ":" + this.envConfigurations.APP_PORT);
         });
 
     }

@@ -147,9 +147,12 @@ class Collection {
     }
 
     toArray() {
-        return this.collection.map(val => {
-            return Object.values(val)[1];
+        const array_ = [];
+        this.map(val => {
+            array_.push(val.getValue());
         })
+
+        return array_;
     }
 
     static toArray(collection) {
