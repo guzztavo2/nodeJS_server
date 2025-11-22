@@ -1,86 +1,81 @@
 const fs = require('fs');
 const Path = require('path');
-class File {
+const Promise = require('../resources/Promise');
+const Utils = require('./Utils');
 
-    getActualProcessDir() {
+class File {
+    fileName;
+    path;
+
+    constructor(fileName, path) {
+        this.setFileName(fileName);
+        this.setPath(path);
+    }
+
+    getFileName() {
+        return this.fileName;
+    }
+    setFileName(fileName) {
+        Utils.validateString(fileName, 'fileName');
+        this.fileName = fileName;
+    }
+
+    getPath() {
+        return this.path;
+    }
+
+    setPath(path) {
+        Utils.validateString(path, 'path');
+        this.path = path.substring(0, path.lastIndexOf(this.getFileName()));
+    }
+
+    static getActualProcessDir() {
         return Path.resolve(process.cwd());
     }
-    static getActualProcessDir() {
-        return (new File()).getActualProcessDir();
-    }
-    static directoryOrFile(fileDir) {
-        return (new File()).directoryOrFile(fileDir);
-    }
-    directoryOrFile(fileDir) {
-        return new Promise((res, err) => {
+
+    static async isFile(fileDir) {
+        let result = false;
+        await (new Promise((res, error) => {
             fs.stat(fileDir, (err, stats) => {
-                if (err) {
-                    console.error(err);
-                    return;
-                }
-                if (stats.isFile())
-                    res('file')
-                else if (stats.isDirectory())
-                    res('directory')
+                if (err)
+                    error(err);
                 else
-                    err(stats)
+                    res(stats.isFile())
             });
-        });
+        })).then(res => { result = res; });
+        return result;
     }
-    getDirPath(dir) {
-        return Path.resolve(process.cwd(), dir);
-    }
-    static getDirPath(dir) {
-        return (new File()).getDirPath(dir);
-    }
-    async readFilesFromDirectory(dir) {
+
+    static async readData(path) {
         let files_;
-        await new Promise((res) => {
-            fs.readdir(dir, (err, files) => {
-                if (err) throw err;
-                res(files);
-            });
-        }).then(res => {
-            files_ = res;
-        });
+
+        await (new Promise((res, rej) => {
+            fs.readFile(path, (err, data) => {
+                if (err)
+                    rej(err);
+                else
+                    res(data);
+            })
+        }).then(data => {
+            files_ = data;
+        }).catch(err => {
+            throw err;
+        }));
+
         return files_;
-    }
-    static readFilesFromDirectory(dir) {
-        return (new File()).readFilesFromDirectory(dir);
-    }
-    async readerFileDataToString(path) {
-        let files_ = await this.readerFileData(path);
-        
-        return files_.toString();
-    }
-    static readerFileDataToString(path) {
-        return (new File()).readerFileDataToString(path);
-    }
-    async readerFileData(path) {
-        let files_;
-        await new Promise((res) => {
-            fs.readFile(path, (err, files) => {
-                if (err) throw err;
-                res(files);
-            });
-        }).then(res => {
-            files_ = res;
-        });
-        
-        return files_;
-    }
-    static readerFileData(path) {
-        return (new File()).readerFileData(path);
     }
 
     delete(directory) {
         fs.unlinkSync(directory);
     }
-    static delete(directory) {
-        return (new File()).delete(directory);
+
+    static async createFile(path, data) {
+        return (new Promise(fs.writeFileSync(path, data))).then(() => true).catch(() => false);
+    }
+
+    static fileExists(path) {
+        return fs.existsSync(path);
     }
 }
-
-
 
 module.exports = File;

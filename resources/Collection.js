@@ -1,41 +1,104 @@
+const Utils = require('./Utils');
+
 class Collection {
     collection = [];
 
-    constructor(array) {
-        this.collection = [];
-        if (!array)
-            return;
-        this.collection = this.createFromArrayObjects(array);
+    constructor(array = null) {
+        if (array)
+            this.createFromArrayObjects(array);
     }
-    add(key = null, value) {
-        if (!this.collection)
-            this.collection = [];
-        
-        const valuedKey = this.collection.length == 0 ? 0 : this.collection.length - 1;
+
+    getLength() {
+        return this.collection.length;
+    }
+
+    synchronize() {
+        const collection = new Collection(this.collection);
+        this.map((value_, index_) => {
+            collection[index_] = value_;
+        });
+        return collection;
+    }
+
+    add(value, key = null) {
+        const valuedKey = this.getLength();
         key = key == null ? valuedKey : key;
-        const dataCreated = new typeCollection(key, value);
+        const dataCreated = new TypeCollection(key, value);
         this[key] = dataCreated;
-        return this.collection.push(dataCreated);
+        this.collection.push(dataCreated);
+        return this;
     }
-    map(func_) {
-        return this.toArray().map(func_);
+
+    push(value) {
+        this.add(null, value);
     }
+
+    async updateByValue(oldValue, newValue) {
+        let updated = false;
+        await this.map((val, _) => {
+            if (val.getValue() === oldValue) {
+                val.setValue(newValue);
+                updated = true;
+            }
+            else {
+                if (updated) return "break";
+                return "continue";
+            }
+
+            return val;
+        })
+        return this;
+    }
+
+    updateByKey(key_, value) {
+        let updated = false;
+        this.map((val, _) => {
+            if (key_ == val.getKey()) {
+                val.setValue(value);
+                updated = true;
+            }
+            else
+                if (!updated) return "continue";
+                else return "break";
+            return val;
+        })
+    }
+
+    async map(func_) {
+        for (let i = 0; i < this.collection.length; i++) {
+            const val = this.getByIndex(i);
+            const resultFrom = await func_(this.collection[i], i);
+
+            if (typeof resultFrom == "string" || !resultFrom)
+                if (!resultFrom || resultFrom.toLowerCase() == "continue") continue;
+                else if (resultFrom.toLowerCase() == "break") break;
+
+            if (resultFrom instanceof TypeCollection) {
+                this.collection[i] = resultFrom;
+                this[i] = resultFrom;
+            }
+
+        }
+        return this;
+    }
+
     removeByKey(key) {
         const index = this.collection.findIndex((value) => {
             return (value.getKey()).indexOf(key) != -1;
         });
 
         this.collection.splice(index, 1);
-
-        return this;
+        this.synchronize();
+        return this.synchronize();
     }
+
     removeByValue(value) {
         const index = this.collection.findIndex((value_) => {
             return (value_.getValue()).indexOf(value) != -1;
         })
 
         this.collection.splice(index, 1);
-        return this;
+        return this.synchronize();
     }
 
     findByKey(key) {
@@ -43,6 +106,11 @@ class Collection {
             return (String(value_.getKey())).indexOf(key) != -1;
         })
     }
+
+    getByIndex(index) {
+        return this.collection[index];
+    }
+
     findByValue(valueFind) {
         if (typeof valueFind == 'function')
             return this.collection.filter(valueFind);
@@ -53,30 +121,28 @@ class Collection {
                 for (const [key_, value_] of Object.entries(value_.getValue()))
 
                     if ((String(value_)).indexOf(valueFind) != -1)
-                        return value_;
+                        return [value_, key_];
             }
         });
     }
+
     first() {
         return this.collection[0];
     }
+
     last() {
         return this.collection[(this.collection.length - 1)];
     }
 
     createFromArrayObjects(array_) {
-        if (!array_)
-            return;
-        array_.map(value => {
-            const index = (this.add(this.collection && this.collection.length ? this.collection.length : 0,
-                Object.assign({}, value)) - 1);
-            this[index] = this.collection[index].getValue();
-        })
+        Utils.validateArray(array_, 'array_');
+        for (let value of array_)
+            this.add(typeof value == "object" ? Object.assign({}, value) : value).getLength() - 1;
+        return this;
     }
 
     static createFromArrayObjects(array_) {
-        const collection = new Collection();
-        collection.createFromArrayObjects(array_);
+        const collection = new Collection(array_);
         return collection;
     }
 
@@ -91,7 +157,7 @@ class Collection {
     }
 }
 
-class typeCollection {
+class TypeCollection {
     key; value;
 
     constructor(key = null, value = null) {
@@ -105,6 +171,7 @@ class typeCollection {
 
     setKey(key) {
         this.key = key;
+        return this;
     }
 
     getKey() {
@@ -113,6 +180,7 @@ class typeCollection {
 
     setValue(value) {
         this.value = value;
+        return this;
     }
 
     getValue() {

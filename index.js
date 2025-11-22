@@ -3,7 +3,7 @@ const app = new App();
 try {
     app.startServer();
 } catch (err) {
-    console.log(err);
+    console.error(err);
 }
 
 module.exports = app.server;

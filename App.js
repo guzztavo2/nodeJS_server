@@ -9,26 +9,18 @@ const Response = require('./resources/Response');
 require('dotenv').config()
 const compression = require("compression");
 const File = require('./resources/File');
+const Directory = require('./resources/Directory');
 const express_session = require('express-session');
 
 class App {
     listConfigurations;
     server;
     async startServer() {
-        if (this.server == undefined)
-            this.server = express();
-        if (this.listConfigurations == undefined)
-            this.listConfigurations = {
-                APP_URL: process.env.APP_URL == '' || typeof process.env.APP_URL !== 'string' ? 'localhost' : process.env.APP_URL,
-                APP_PORT: process.env.APP_PORT ?? 3000,
-                DB_TYPE: process.env.DB_TYPE,
-                APP_DEBUG: process.env.APP_DEBUG == 'true' ? true : false,
-                APP_ENV: process.env.APP_ENV
-            };
-
+        this.createServer();
+        await this.createConfigurations();
         try {
             await Promise.all([
-                await this.defineRoutes(),
+                this.defineRoutes(),
                 this.initConfigServer(),
                 this.migrationTable(),
             ]);
@@ -37,6 +29,27 @@ class App {
         }
     }
 
+    createServer() {
+        if (this.server == undefined)
+            this.server = express();
+        return this.server;
+    }
+
+    async createConfigurations() {
+        if (!File.fileExists(Directory.getAbsolutePath('./.env'))) {
+            // const data = await File.readData(File.getPath('./.env-example'));
+            const data = await Directory.readDirectory(Directory.getAbsolutePath('./'));
+            console.log(data);
+        }
+        if (this.listConfigurations == undefined)
+            this.listConfigurations = {
+                APP_URL: process.env.APP_URL == '' || typeof process.env.APP_URL !== 'string' ? 'localhost' : process.env.APP_URL,
+                APP_PORT: process.env.APP_PORT ?? 3000,
+                DB_TYPE: process.env.DB_TYPE,
+                APP_DEBUG: process.env.APP_DEBUG == 'true' ? true : false,
+                APP_ENV: process.env.APP_ENV
+            };
+    }
     async defineRoutes() {
         var isError = false;
 
@@ -51,19 +64,19 @@ class App {
         const routes_ = await this.readFilesRoutes();
         await this.getRoutes(routes_, (route) => {
             const controllerArray = typeof route.controller == 'string' && route.controller.length > 0 ? route.controller.split('::') : '';
-            this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares, 
+            this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares,
                 this.serverReceiveDataConfiguration()), async (req, res) => {
-                try {
-                    const request = new Request(req, res);
-                    const controller = this.findController(controllerArray[0], request);
-                    const response = await controller[controllerArray[1]](request);
-                    if (typeof response !== 'undefined' && response !== undefined)
-                        response.renderResponse(res);
-                } catch (err) {
-                    isError = !isError
-                    Response.error(res, 404, err)
-                }
-            });
+                    try {
+                        const request = new Request(req, res);
+                        const controller = this.findController(controllerArray[0], request);
+                        const response = await controller[controllerArray[1]](request);
+                        if (typeof response !== 'undefined' && response !== undefined)
+                            response.renderResponse(res);
+                    } catch (err) {
+                        isError = !isError
+                        Response.error(res, 404, err)
+                    }
+                });
         });
 
         await this.defineStorageRoutes();
@@ -139,7 +152,7 @@ class App {
             }
         }
     }
-    
+
     async checkMiddlewares(route) {
         const middlewares = [];
         if (route.middlewares && route.middlewares.length > 0)
