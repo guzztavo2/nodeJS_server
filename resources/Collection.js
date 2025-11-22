@@ -1,4 +1,4 @@
-const Utils = require('./Utils');
+import Utils from './Utils.js';
 
 class Collection {
     collection = [];
@@ -192,4 +192,4 @@ class TypeCollection {
 
 
 }
-module.exports = Collection;
+export default Collection;

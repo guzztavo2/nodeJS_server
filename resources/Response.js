@@ -1,6 +1,7 @@
-const fs = require('fs');
-const File = require('./File');
-require('dotenv').config({ path: '../' })
+import fs from 'fs';
+import File from './File.js';
+import dotenv from 'dotenv';
+dotenv.config({ path: '../' })
 
 class Response {
     SERVER_SETTINGS;
@@ -9,7 +10,7 @@ class Response {
     dataToFront = {};
     session;
     response;
-    
+
     constructor(session = null) {
         this.CONFIGURATION_LIST = {
             APP_URL: process.env.APP_URL == '' || typeof process.env.APP_URL !== 'string' ? 'localhost' : process.env.APP_URL,
@@ -74,7 +75,7 @@ class Response {
         if (data !== undefined)
             this.session.create('responses', { 'data': data })
 
-    
+
         return new ResponseType('redirect', url);
     }
     json(data, status = 200) {
@@ -151,7 +152,7 @@ class ResponseType {
             'view': () => {
                 if (this.file == false)
                     throw Error("View File Not Found");
-                
+
                 if (this.dataElements && this.dataElements !== undefined)
                     res.status(this.status).render(File.getDirPath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
                 else
@@ -184,4 +185,4 @@ class ResponseType {
         res.end();
     }
 }
-module.exports = Response;
+export default Response;

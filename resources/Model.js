@@ -392,4 +392,4 @@ class typeModelMySql {
         this.innerJoin_var = '';
     }
 }
-module.exports = Model;
+export default Model;

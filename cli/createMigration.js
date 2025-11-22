@@ -85,7 +85,7 @@ if (fs.existsSync(path + migrationName + ".js")) {
 
 try {
     fs.appendFileSync(path + migrationName + ".js",
-        `const Migration = require("../resources/Migration");\n\nconst randomMigration = new class extends Migration {\n    table_name = "${modelName}";\n\n    create() {\n        return [\n            this.id()\n        ];\n    }\n}\n\nmodule.exports = randomMigration;`, (err) => {
+        `const Migration = require("../resources/Migration");\n\nconst randomMigration = new class extends Migration {\n    table_name = "${modelName}";\n\n    create() {\n        return [\n            this.id()\n        ];\n    }\n}\n\nexport default randomMigration;`, (err) => {
             console.log(err);
         });
 

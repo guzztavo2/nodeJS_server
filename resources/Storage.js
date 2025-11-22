@@ -47,7 +47,7 @@ class Storage {
     }
 
 }
-module.exports = Storage;
+export default Storage;
 
 class Disk {
     directory

@@ -33,7 +33,7 @@ if (fs.existsSync(path + middlewareName + ".js")) {
 }
 try {
     fs.appendFileSync(path + middlewareName + ".js",
-        `const middleware = new class {\n    identifier = "";\n\n    next(request, response, next) {\n        console.log("Middleware here's");\n        next();\n    }\n\n}\nmodule.exports = middleware;`,
+        `const middleware = new class {\n    identifier = "";\n\n    next(request, response, next) {\n        console.log("Middleware here's");\n        next();\n    }\n\n}\nexport default middleware;`,
         (err) => {
             console.log(err);
         });

@@ -1,5 +1,3 @@
-const fs = require('fs');
-const Path = require('path');
 class Promise {
 
     callback;
@@ -19,4 +17,4 @@ class Promise {
 
 
 
-module.exports = Promise;
+export default Promise;

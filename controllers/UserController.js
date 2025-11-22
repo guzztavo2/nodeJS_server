@@ -10,4 +10,4 @@ class userController extends Controller {
     }
 }
 
-module.exports = userController;
+export default userController;

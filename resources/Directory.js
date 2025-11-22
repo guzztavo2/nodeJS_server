@@ -1,9 +1,9 @@
-const fs = require('fs');
-const Path = require('path');
-const Promise = require('./Promise');
-const Utils = require('./Utils');
-const File = require('./File');
-const Collection = require('./Collection');
+import fs from 'fs';
+import Path from 'path';
+import Promise from './Promise.js';
+import Utils from './Utils.js';
+import File from './File.js';
+import Collection from './Collection.js';
 
 class Directory {
     directory;
@@ -56,7 +56,7 @@ class Directory {
             });
         })).then(async res => {
             const collection = new Collection();
-            
+
             await Collection.createFromArrayObjects(res).map(async (val, key) => {
                 const file = dir + "/" + val.getValue();
                 if (file instanceof Directory || file instanceof File)
@@ -79,4 +79,4 @@ class Directory {
     }
 }
 
-module.exports = Directory;
+export default Directory;

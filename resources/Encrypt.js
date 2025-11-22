@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+import bcrypt from 'bcrypt';
 
 class Encrypt {
     salt_round = 10
@@ -36,4 +36,4 @@ class Encrypt {
     }
 }
 
-module.exports = Encrypt;
+export default Encrypt;

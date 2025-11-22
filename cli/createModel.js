@@ -35,7 +35,7 @@ if (fs.existsSync(path + modelName + ".js")) {
 }
 try {
     fs.appendFileSync(path + modelName + ".js",
-        `const Model = require("../resources/Model");\n\nclass ${modelName} extends Model {\n    table = '';\n\n    fillable = [\n        'id',\n        'name',\n        'email'\n    ]\n\n    hidden = [\n        'password'\n    ]\n\n    cast = {\n        "users": "object"\n    }\n\n}\nmodule.exports = ${modelName};`, (err) => {
+        `const Model = require("../resources/Model");\n\nclass ${modelName} extends Model {\n    table = '';\n\n    fillable = [\n        'id',\n        'name',\n        'email'\n    ]\n\n    hidden = [\n        'password'\n    ]\n\n    cast = {\n        "users": "object"\n    }\n\n}\nexport default ${modelName};`, (err) => {
             console.log(err);
         });
 

@@ -1,6 +1,8 @@
-const Session = require("./Session");
-const Validator = require("../resources/Validator");
-const Response = require("./Response");
+
+import Session from "./Session.js";
+import Validator from "../resources/Validator.js";
+import Response from "./Response.js";
+
 class Request {
     requests = [];
 
@@ -55,7 +57,7 @@ class Request {
     all() {
         return this.requests;
     }
-    
+
     session() {
         return this.session;
     }
@@ -70,7 +72,7 @@ class Request {
     }
 
     async validate(validations, messages = null) {
-    const data = this.requestsToObject()
+        const data = this.requestsToObject()
         const result = await ((new Validator).make(data, validations, messages));
         const response = new Response(this.session);
 
@@ -100,4 +102,4 @@ class RequestType {
         };
     }
 }
-module.exports = Request;
+export default Request;

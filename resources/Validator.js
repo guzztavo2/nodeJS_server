@@ -1,4 +1,4 @@
-const File = require("./File");
+import File from './File.js';
 
 class Validator {
     errors = {};
@@ -228,4 +228,4 @@ class Validators {
     }
 }
 
-module.exports = Validator;
+export default Validator;

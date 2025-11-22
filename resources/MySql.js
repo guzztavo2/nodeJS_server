@@ -1,4 +1,4 @@
-const mysql = require('mysql');
+import mysql from 'mysql';
 class MySql {
     connection; host; user; password; database;
 
@@ -152,7 +152,7 @@ class MySql {
             if (keys == null)
                 this.connection.query("SELECT * FROM " + table, (err, result, fields) => {
                     if (err) error(err);
-                    if(!fields)
+                    if (!fields)
                         return [];
                     res(fields.map((value) => value.name));
                 });
@@ -410,4 +410,4 @@ class MySql {
         }).then().catch(err => { throw Error(err) });
     }
 }
-module.exports = MySql;
+export default MySql;

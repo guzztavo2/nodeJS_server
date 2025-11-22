@@ -172,4 +172,4 @@ class Column {
         }
     }
 }
-module.exports = Migration;
+export default Migration;

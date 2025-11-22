@@ -1,4 +1,4 @@
-const App = require('./App.js');
+import App from './App.js';
 const app = new App();
 try {
     app.startServer();
@@ -6,4 +6,4 @@ try {
     console.error(err);
 }
 
-module.exports = app.server;
+export default app.server;

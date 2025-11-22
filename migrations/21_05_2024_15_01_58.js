@@ -14,4 +14,4 @@ const randomMigration = new class extends Migration {
     }
 }
 
-module.exports = randomMigration;
+export default randomMigration;

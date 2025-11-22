@@ -1,4 +1,5 @@
 const Response = require('./Response.js');
+
 class Controller {
     configFile = []
     response;
@@ -32,4 +33,4 @@ class Controller {
 }
 
 
-module.exports = Controller;
+export default Controller;

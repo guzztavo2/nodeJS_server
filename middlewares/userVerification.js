@@ -8,4 +8,4 @@ const middleware = new class {
 
 }
 
-module.exports = middleware;
+export default middleware;

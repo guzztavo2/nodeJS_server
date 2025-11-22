@@ -1,17 +1,20 @@
-const express = require('express');
-const Path = require('path');
-const Request = require('./resources/Request');
-const bodyParser = require('body-parser');
-const multer = require('multer');
-const MySql = require('./resources/MySql');
+import express from 'express';
+import Path from 'path';
+import Request from './resources/Request.js';
+import bodyParser from 'body-parser';
+import multer from 'multer';
+import MySql from './resources/MySql.js';
+import Response from './resources/Response.js';
+import compression from "compression";
+import File from './resources/File.js';
+import Directory from './resources/Directory.js';
+import express_session from 'express-session';
+import Encrypt from './resources/Encrypt.js';
+import Collection from './resources/Collection.js';
+import Env from './resources/Env.js';
+
 const upload = multer();
-const Response = require('./resources/Response');
-const compression = require("compression");
-const File = require('./resources/File');
-const Directory = require('./resources/Directory');
-const express_session = require('express-session');
-const Encrypt = require('./resources/Encrypt');
-const Collection = require('./resources/Collection');
+
 class App {
     envConfigurations;
     server;
@@ -29,6 +32,8 @@ class App {
         return this.server;
     }
     async checkEnv() {
+        
+        new Env();
         if (!File.fileExists(Directory.getAbsolutePath('./.env'))) {
             let data = (await File.readData(Directory.getAbsolutePath('./.env-example'))).toString();
             data = data.replace('APP_SECRET=', "APP_SECRET=" + Encrypt.generateString(40));
@@ -275,4 +280,4 @@ class App {
     }
 
 }
-module.exports = App;
+export default App;
