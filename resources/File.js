@@ -7,6 +7,7 @@ import Directory from './Directory.js';
 class File {
     fileName;
     path;
+    data;
 
     constructor(fileName, path) {
         this.setFileName(fileName);
@@ -35,8 +36,10 @@ class File {
         this.path = Directory.getAbsolutePath(path.substring(0, path.lastIndexOf(this.getFileName())));
     }
 
-    readData() {
-        return File.readData(this.getAbsolutePath());
+    async readData(force = false) {
+        if (!this.data || force)
+            this.data = await File.readData(this.getAbsolutePath());
+        return this.data;
     }
 
     exists() {
@@ -51,8 +54,11 @@ class File {
         return File.createFile(this.getAbsolutePath(), data);
     }
 
-    writeFile(data, flag = 'a+') {
-        return File.writeFile(this.getAbsolutePath(), data, flag);
+    writeFile(data, append = true) {
+        if (append)
+            return File.appendWriteFile(this.getAbsolutePath(), data);
+        else
+            return File.reWriteFile(this.getAbsolutePath(), data);
     }
     static getActualProcessDir() {
         return Path.resolve(process.cwd());
@@ -90,19 +96,14 @@ class File {
     }
 
     static async createFile(path, data = null) {
-        return File.reWriteFile(path, data ?? '').then(() => {
-            if (this.isFile(path))
-                return true;
-            return false;
-        }).catch((e) => {
-            throw new Error('Error creating file - ' + e.message);
-        });
+        await (File.reWriteFile(path, data ?? ''));
+        return this.isFile(path);
     }
 
     static async reWriteFile(path, data) {
         return new Promise((res, rej) => {
             try {
-                fs.writeFile(path, data, { flag: 'w+' });
+                fs.writeFile(path, data, () => { flag: 'w+' });
                 res(true);
             } catch (e) {
                 rej(e);

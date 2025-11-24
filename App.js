@@ -31,29 +31,9 @@ class App {
             this.server = express();
         return this.server;
     }
-    async checkEnv() {
-        
-        new Env();
-        if (!File.fileExists(Directory.getAbsolutePath('./.env'))) {
-            let data = (await File.readData(Directory.getAbsolutePath('./.env-example'))).toString();
-            data = data.replace('APP_SECRET=', "APP_SECRET=" + Encrypt.generateString(40));
-            if (!await File.createFile(Directory.getAbsolutePath('./.env'), data))
-                throw new Error('Error creating .env file from .env-example');
-            require('dotenv').config();
-        }
-    }
+    
     async createConfigurations() {
-        await this.checkEnv();
-        if (this.envConfigurations == undefined)
-            this.envConfigurations = {
-                APP_NAME: process.env.APP_NAME,
-                APP_SECRET: process.env.APP_SECRET,
-                APP_URL: process.env.APP_URL,
-                APP_PORT: process.env.APP_PORT,
-                DB_TYPE: process.env.DB_TYPE,
-                APP_DEBUG: process.env.APP_DEBUG == 'true' ? true : false,
-                APP_ENV: process.env.APP_ENV
-            };
+        this.envConfigurations = await Env.init();    
     }
 
     expressSession() {
