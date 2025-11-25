@@ -9,15 +9,18 @@ import compression from "compression";
 import File from './resources/File.js';
 import Directory from './resources/Directory.js';
 import express_session from 'express-session';
-import Encrypt from './resources/Encrypt.js';
 import Collection from './resources/Collection.js';
 import Env from './resources/Env.js';
-
+import Storage from './resources/Storage.js';
 const upload = multer();
 
 class App {
     envConfigurations;
     server;
+    routeDirectory = new Directory('routes', './routes');
+    middlewareDirectory = new Directory('middlewares', './middlewares');
+    routes = new Collection();
+
     async startServer() {
         this.createServer();
         await this.createConfigurations();
@@ -31,17 +34,17 @@ class App {
             this.server = express();
         return this.server;
     }
-    
+
     async createConfigurations() {
-        this.envConfigurations = await Env.init();    
+        this.envConfigurations = await Env.init();
     }
 
     expressSession() {
         this.server.use(express_session({
-            secret: this.envConfigurations.APP_SECRET,
+            secret: this.envConfigurations.getEnvConfigurations().APP_SECRET,
             resave: false,
             saveUninitialized: false,
-            cookie: { secure: this.envConfigurations.APP_ENV === 'production' }
+            cookie: { secure: this.envConfigurations.getEnvConfigurations().APP_ENV === 'production' }
         }));
     }
 
@@ -51,7 +54,7 @@ class App {
         const routes_ = await this.readFilesRoutes();
         await this.getRoutes(routes_, (route) => {
             const controllerArray = typeof route.controller == 'string' && route.controller.length > 0 ? route.controller.split('::') : '';
-            this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares,
+            this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares.toArray(),
                 this.serverReceiveDataConfiguration()), async (req, res) => {
                     try {
                         const request = new Request(req, res);
@@ -70,7 +73,6 @@ class App {
     }
 
     async defineStorageRoutes() {
-        const Storage = require('./resources/Storage');
         const mime = require('mime-types');
 
         const storage = new Storage();
@@ -126,7 +128,7 @@ class App {
     async getRoutes(routesFromFile, callback) {
         await routesFromFile.map(async (val, key) => {
             const key_ = val.getKey();
-            const route = val.getValue();
+            let route = val.getValue();
 
             if (key_ !== 'web')
                 if (route.url.length > 1)
@@ -145,35 +147,34 @@ class App {
     }
 
     async checkMiddlewares(route) {
-        const middlewares = [];
+        const middlewares = new Collection();
         if (route.middlewares && route.middlewares.length > 0)
             for (const middleware_ of route.middlewares) {
-                var pathMiddleware = Directory.getAbsolutePath('middlewares');
-                let middlewaresFiles = await File.readFilesFromDirectory(pathMiddleware);
-                for (const value of middlewaresFiles) {
-                    const middleware = require(pathMiddleware + '/' + value);
-                    if (middleware.identifier == middleware_) {
-                        middlewares.push(middleware.next);
-                    }
-                }
+                let middlewaresFiles = await this.middlewareDirectory.readDirectory();
+                await (middlewaresFiles.filter(async (val) => val.getValue() instanceof File));
+                await middlewaresFiles.map(async (val, key) => {
+                    const mod = (await import(val.getValue().getAbsolutePath()));
+                    const middleware = mod.default || mod;
+                    if (middleware.identifier == middleware_)
+                        middlewares.add(middleware.next);
+                });
             }
         route.middlewares = middlewares;
         return route;
     }
 
     async readFilesRoutes() {
-        const routePath = Directory.getAbsolutePath('routes');
-        const files = await Directory.readDirectory(routePath);
-        const routes = new Collection();
+        const directory = await this.routeDirectory.readDirectory();
+        await directory.filter(async (val) => val.getValue() instanceof File);
 
-        await files.map(async (val, key) => {
+        await directory.map(async (val, key) => {
             const file = val.getValue();
             const route = file.getFileName().substring(0, file.getFileName().indexOf('.'));
             if (route)
-                routes.add(JSON.parse(await File.readData(file.getAbsolutePath()))[0], route);
+                this.routes.add(JSON.parse(await file.readData())[0], route);
         });
 
-        return routes;
+        return this.routes;
     }
 
     findController(controller, request) {

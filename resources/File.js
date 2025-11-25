@@ -54,7 +54,7 @@ class File {
         return File.createFile(this.getAbsolutePath(), data);
     }
 
-    writeFile(data, append = true) {
+    async writeFile(data, append = true) {
         if (append)
             return File.appendWriteFile(this.getAbsolutePath(), data);
         else
@@ -97,29 +97,29 @@ class File {
 
     static async createFile(path, data = null) {
         await (File.reWriteFile(path, data ?? ''));
+        this.data = data;
         return this.isFile(path);
     }
 
-    static async reWriteFile(path, data) {
+    static reWriteFile(path, data) {
         return new Promise((res, rej) => {
-            try {
-                fs.writeFile(path, data, () => { flag: 'w+' });
+            fs.writeFile(path, data, { flag: 'w+' }, (err) => {
+                if (err)
+                    rej("Não foi possivel criar o arquivo: " + err);
                 res(true);
-            } catch (e) {
-                rej(e);
-            }
-        });
+            });
+        })
     }
 
-    static async appendWriteFile(path, data) {
+    static appendWriteFile(path, data) {
         return new Promise((res, rej) => {
-            try {
-                fs.writeFile(path, data, { flag: 'a' });
-                res(true);
-            } catch (e) {
-                rej(e);
-            }
+        fs.writeFile(path, data, { flag: 'a' }, (err) => {
+            if (err)
+                rej("Não foi possivel adicionar mais ao arquivo: " + err);
+            res(true);
         });
+    });
+
     }
 
     static fileExists(path) {

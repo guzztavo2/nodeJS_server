@@ -63,7 +63,17 @@ class Collection {
             return val;
         })
     }
+    async filter(func_) {
+        const collectionFiltered = new Collection();
+        await this.map(async (val, key) => {
+            const resultFrom = await func_(val, key);
 
+            if (resultFrom)
+                collectionFiltered.add(val.getValue(), val.getKey());
+        });
+        this.collection = collectionFiltered.collection;
+        return this;
+    }
     async map(func_) {
         for (let i = 0; i < this.collection.length; i++) {
             const val = this.getByIndex(i);

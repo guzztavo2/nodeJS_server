@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import crypto from 'node:crypto';
 
 class Encrypt {
     salt_round = 10
@@ -31,7 +32,6 @@ class Encrypt {
     }
 
     static generateString(size = 20) {
-        const crypto = require('node:crypto');
         return crypto.randomBytes(size).toString('hex').slice(0, size);
     }
 }

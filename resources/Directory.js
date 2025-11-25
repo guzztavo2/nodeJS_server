@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs, { Dir } from 'fs';
 import Path from 'path';
 import Promise from './Promise.js';
 import Utils from './Utils.js';
@@ -22,15 +22,18 @@ class Directory {
         return this.path;
     }
     getAbsolutePath() {
-        return Path.resolve(this.directory, this.path);
+        return Path.resolve(this.path, this.directory);
     }
     setDirectory(directory) {
         Utils.validateString(directory, 'directory');
         this.directory = directory;
     }
+    readDirectory(){
+        return Directory.readDirectory(this.getAbsolutePath());
+    }
     setPath(path) {
         Utils.validateString(path, 'path');
-        this.path = path;
+        this.path = Directory.getAbsolutePath(path);
     }
 
     static async isDirectory(fileDir) {
