@@ -1,5 +1,6 @@
 import fs from 'fs';
 import File from './File.js';
+import Directory from './Directory.js';
 import dotenv from 'dotenv';
 dotenv.config({ path: '../' })
 
@@ -154,9 +155,9 @@ class ResponseType {
                     throw Error("View File Not Found");
 
                 if (this.dataElements && this.dataElements !== undefined)
-                    res.status(this.status).render(File.getDirPath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
+                    res.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
                 else
-                    res.status(this.status).render(File.getDirPath(this.file), Object.assign(this.server_configuration, { statusCode: this.status }));
+                    res.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, { statusCode: this.status }));
                 return true;
             },
             'json': () => {

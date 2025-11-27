@@ -1,4 +1,4 @@
-const Controller = require('../resources/Controller');
+import Controller from "../resources/Controller.js";
 class userController extends Controller {
 
     constructor(configFile) {

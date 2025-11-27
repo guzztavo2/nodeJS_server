@@ -2,6 +2,7 @@
   "public": {
     "root": "/storage/",
     "url": "/",
-    "visibility": "public"
+    "visibility": "public",
+    "is_recursive": true
   }
 }

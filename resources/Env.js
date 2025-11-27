@@ -7,13 +7,11 @@ class Env {
    static env_example = new File('.env-example', './');
    env_path = Directory.getAbsolutePath('./');
    env_file = new File('.env', this.env_path);
-   envConfigurations;
+   env_configurations;
 
    static async init() {
       const env = new Env();
       await env.checkEnv();
-      await env.generateAppSecret();
-      env.synchronizeDotEnv();
       return env;
    }
 
@@ -21,7 +19,9 @@ class Env {
       if (!this.env_file.exists() || (await this.env_file.readData(true)).toString() == '') {
          let data = (await Env.env_example.readData()).toString();
          await this.env_file.create(data);
+         await this.generateAppSecret();
       }
+      this.synchronizeDotEnv();
    }
 
    async generateAppSecret() {
@@ -48,7 +48,7 @@ class Env {
    synchronizeDotEnv() {
       dotenv.config({ path: this.env_file.getAbsolutePath() });
 
-      this.envConfigurations = {
+      this.env_configurations = {
          APP_NAME: process.env.APP_NAME,
          APP_SECRET: process.env.APP_SECRET,
          APP_URL: process.env.APP_URL,
@@ -60,7 +60,7 @@ class Env {
    }
 
    getEnvConfigurations() {
-      return this.envConfigurations;
+      return this.env_configurations;
    }
 }
 

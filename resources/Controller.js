@@ -1,11 +1,14 @@
-const Response = require('./Response.js');
-
+import Response from './Response.js';
+import Env from './Env.js';
+import Directory from './Directory.js';
 class Controller {
-    configFile = []
     response;
     session;
-    setConfigFile(configFile, request) {
-        this.configFile = configFile;
+    envConfig;
+
+    async setConfigFile(request) {
+        this.envConfig = await Env.init();
+        this.envConfig.synchronizeDotEnv();
         this.response = new Response(request.session);
         this.session = request.session;
         if (this.title !== undefined)
@@ -29,6 +32,16 @@ class Controller {
         session['actual'] = request.actualUrl();
 
         request.session.create('responses', session)
+    }
+
+    static async findController(controller) {
+        try {
+            const mod = (await import(Directory.getAbsolutePath("./controllers/" + controller + ".js")));
+            return mod.default || mod;
+        }
+        catch (err) {
+            throw new Error(err);
+        }
     }
 }
 

@@ -13,10 +13,10 @@ class Collection {
     }
 
     synchronize() {
-        const collection = new Collection(this.collection);
-        this.map((value_, index_) => {
-            collection[index_] = value_;
-        });
+        const collection = new Collection();
+        collection.collection = this.collection;
+        collection.map((value_, index_) => collection[index_] = value_.getValue() );
+
         return collection;
     }
 
@@ -69,13 +69,12 @@ class Collection {
             const resultFrom = await func_(val, key);
 
             if (resultFrom)
-                collectionFiltered.add(val.getValue(), val.getKey());
+                collectionFiltered.add(val.getValue());
         });
-        this.collection = collectionFiltered.collection;
-        this.synchronize();
-        return this;
+        return collectionFiltered;
     }
     async map(func_) {
+        const collectionMapped = new Collection();
         for (let i = 0; i < this.collection.length; i++) {
             const val = this.getByIndex(i);
             const resultFrom = await func_(this.collection[i], i);
@@ -85,12 +84,12 @@ class Collection {
                 else if (resultFrom.toLowerCase() == "break") break;
 
             if (resultFrom instanceof TypeCollection) {
-                this.collection[i] = resultFrom;
-                this[i] = resultFrom;
+                collectionMapped.collection[i] = resultFrom;
+                collectionMapped[i] = resultFrom;
             }
 
         }
-        return this;
+        return collectionMapped;
     }
 
     removeByKey(key) {

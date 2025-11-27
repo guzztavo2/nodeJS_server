@@ -18,18 +18,20 @@ import { fileURLToPath } from 'url';
 import RateLimit from "express-rate-limit";
 import helmet from 'helmet';
 import cors from 'cors';
+import Controller from './resources/Controller.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const upload = multer();
 
 class App {
-    envConfigurations;
+    env_configurations;
     server;
-    routeDirectory = new Directory('routes', './routes');
-    middlewareDirectory = new Directory('middlewares', './middlewares');
+    route_directory = new Directory('routes', './routes');
+    middleware_directory = new Directory('middlewares', './middlewares');
+    cors_file = new File('cors.json', './config');
     routes = new Collection();
-    corsFile = new File('cors.json', './config');
+    
 
     async startServer() {
         this.createServer();
@@ -46,15 +48,15 @@ class App {
     }
 
     async createConfigurations() {
-        this.envConfigurations = await Env.init();
+        this.env_configurations =  await Env.init();
     }
 
     expressSession() {
         this.server.use(express_session({
-            secret: this.envConfigurations.getEnvConfigurations().APP_SECRET,
+            secret: this.env_configurations.getEnvConfigurations().APP_SECRET,
             resave: false,
             saveUninitialized: false,
-            cookie: { secure: this.envConfigurations.getEnvConfigurations().APP_ENV === 'production' }
+            cookie: { secure: this.env_configurations.getEnvConfigurations().APP_ENV === 'production' }
         }));
     }
 
@@ -68,7 +70,7 @@ class App {
                 this.serverReceiveDataConfiguration()), async (req, res) => {
                     try {
                         const request = new Request(req, res);
-                        const controller = this.findController(controllerArray[0], request);
+                        const controller = (await (new (await Controller.findController(controllerArray[0]))()).setConfigFile(request));
                         const response = await controller[controllerArray[1]](request);
                         if (typeof response !== 'undefined' && response !== undefined)
                             response.renderResponse(res);
@@ -93,8 +95,9 @@ class App {
                 continue;
 
             const rootPath = File.getActualProcessDir() + Directory.getAbsolutePath(value.root) + '/'
-            const files = await Directory.readDirectory(rootPath);
-
+            let files = await Directory.readDirectory(rootPath);
+            if(!value.is_recursive)
+                files = await files.filter((value) => value.getValue() instanceof File);
             const getFilesUrl = async (files, value, rootPath, filePath_ = null) => {
                 let response = [];
                 if (files.length <= 0)
@@ -124,6 +127,7 @@ class App {
                 });
                 return response;
             };
+
             const filesUrl = await getFilesUrl(files, value, rootPath);
             if (filesUrl !== false)
                 for (const file of filesUrl) {
@@ -134,8 +138,8 @@ class App {
                     });
                 }
         }
-
     }
+
     async getRoutes(routesFromFile, callback) {
         await routesFromFile.map(async (val, key) => {
             const key_ = val.getKey();
@@ -150,18 +154,13 @@ class App {
             route = await this.checkMiddlewares(route);
             callback(route);
         });
-        const keys = Object.keys(routesFromFile.toArray());
-        for (const key of keys) {
-            const routes = routesFromFile[key]
-
-        }
     }
 
     async checkMiddlewares(route) {
         const middlewares = new Collection();
         if (route.middlewares && route.middlewares.length > 0)
             for (const middleware_ of route.middlewares) {
-                let middlewaresFiles = await this.middlewareDirectory.readDirectory();
+                let middlewaresFiles = await this.middleware_directory.readDirectory();
                 await (middlewaresFiles.filter(async (val) => val.getValue() instanceof File));
                 await middlewaresFiles.map(async (val, key) => {
                     const mod = (await import(val.getValue().getAbsolutePath()));
@@ -175,7 +174,7 @@ class App {
     }
 
     async readFilesRoutes() {
-        const directory = await this.routeDirectory.readDirectory();
+        const directory = await this.route_directory.readDirectory();
         await directory.filter(async (val) => val.getValue() instanceof File);
 
         await directory.map(async (val, key) => {
@@ -190,10 +189,11 @@ class App {
         return this.routes;
     }
 
-    findController(controller, request) {
+    async findController(controller, request) {
         try {
-            const controllerPage = require('./controllers/' + controller);
-            return (new controllerPage()).setConfigFile(this.envConfigurations, request);
+            const mod = (await import(Directory.getAbsolutePath("./controllers/" + controller + ".js")));
+            const controllerPage = mod.default || mod;
+            return (await (new controllerPage()).setConfigFile(this.env_configurations.getEnvConfigurations(), request));
         }
         catch (err) {
             throw new Error(err);
@@ -223,14 +223,14 @@ class App {
         this.server.set('views', Directory.getAbsolutePath('./views'));
         this.securityPass();
         this.requestLimiter();
-        this.server.use(cors(JSON.parse(await this.corsFile.readData())));
+        this.server.use(cors(JSON.parse(await this.cors_file.readData())));
         this.server.all('*', (req, res) => {
             Response.error(res, 404, 'Page Not Found');
         });
-        this.server.listen(this.envConfigurations.envConfigurations.APP_PORT, this.envConfigurations.envConfigurations.APP_URL, (err) => {
+        this.server.listen(this.env_configurations.getEnvConfigurations().APP_PORT, this.env_configurations.getEnvConfigurations().APP_URL, (err) => {
             if (err)
                 throw (err);
-            console.log("Server Started\nhttp://" + this.envConfigurations.envConfigurations.APP_URL + ":" + this.envConfigurations.envConfigurations.APP_PORT);
+            console.log("Server Started\nhttp://" + this.env_configurations.getEnvConfigurations().APP_URL + ":" + this.env_configurations.getEnvConfigurations().APP_PORT);
         });
 
     }
