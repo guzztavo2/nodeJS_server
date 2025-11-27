@@ -1,10 +1,10 @@
-const File = require('./File');
+import File from './File.js';
 
 class Storage {
 
     disks;
     directory;
-   
+    fileSystems = new File('fileSystems.json', './config/')
     async disk(diskName) {
         await await this.setDisks();
         try {
@@ -19,7 +19,7 @@ class Storage {
     }
 
     async setDisks() {
-        const result = await File.readerFileDataToString('config/fileSystems.json');
+        const result = (await this.fileSystems.readData(true)).toString();
         this.disks = JSON.parse(result);
         return this.disks;
     }

@@ -1,5 +1,4 @@
 import express from 'express';
-import Path from 'path';
 import Request from './resources/Request.js';
 import bodyParser from 'body-parser';
 import multer from 'multer';
@@ -12,6 +11,16 @@ import express_session from 'express-session';
 import Collection from './resources/Collection.js';
 import Env from './resources/Env.js';
 import Storage from './resources/Storage.js';
+import mime from 'mime-types';
+import ejs from 'ejs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+import RateLimit from "express-rate-limit";
+import helmet from 'helmet';
+import cors from 'cors';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const upload = multer();
 
 class App {
@@ -20,13 +29,14 @@ class App {
     routeDirectory = new Directory('routes', './routes');
     middlewareDirectory = new Directory('middlewares', './middlewares');
     routes = new Collection();
+    corsFile = new File('cors.json', './config');
 
     async startServer() {
         this.createServer();
         await this.createConfigurations();
         await this.defineRoutes();
-        this.initConfigServer();
-        await this.migrationTable();
+        await this.initConfigServer();
+        // await this.migrationTable();
     }
 
     createServer() {
@@ -73,8 +83,6 @@ class App {
     }
 
     async defineStorageRoutes() {
-        const mime = require('mime-types');
-
         const storage = new Storage();
         const disks = await storage.setDisks();
 
@@ -84,33 +92,36 @@ class App {
             if (value.visibility !== 'public')
                 continue;
 
-            const rootPath = File.getActualProcessDir() + File.getDirPath(value.root) + '/'
-            const files = await File.readFilesFromDirectory(rootPath)
+            const rootPath = File.getActualProcessDir() + Directory.getAbsolutePath(value.root) + '/'
+            const files = await Directory.readDirectory(rootPath);
 
             const getFilesUrl = async (files, value, rootPath, filePath_ = null) => {
                 let response = [];
                 if (files.length <= 0)
                     return false;
-
-                for (const file of files) {
+                await files.map(async (val) => {
                     let filePath;
-                    if (filePath_ !== null)
-                        filePath = File.getDirPath(filePath_ + file);
-                    else
-                        filePath = File.getDirPath(rootPath + file);
+                    const file = val.getValue();
 
-                    switch (await File.directoryOrFile(filePath)) {
-                        case 'directory':
-                            const resultFromDir = await getFilesUrl(await File.readFilesFromDirectory(filePath), value, rootPath, filePath + "/");
-                            if (resultFromDir !== false)
-                                response = response.concat(resultFromDir);
-                            break;
-                        case 'file':
-                            const file_url = filePath.replace(rootPath, '/')
-                            response = response.concat({ file_url: file_url, file_path: filePath });
-                            break
+                    if (file instanceof File) {
+                        if (filePath_ !== null)
+                            filePath = Directory.getAbsolutePath(filePath_ + file.getFileName());
+                        else
+                            filePath = Directory.getAbsolutePath(rootPath + file.getFileName());
+
+                        const file_url = filePath.replace(rootPath, '/')
+                        response = response.concat({ file_url: file_url, file_path: filePath });
+                    } else if (file instanceof Directory) {
+                        if (filePath_ !== null)
+                            filePath = Directory.getAbsolutePath(filePath_ + file.getDirectory());
+                        else
+                            filePath = Directory.getAbsolutePath(rootPath + file.getDirectory());
+
+                        const resultFromDir = await getFilesUrl(await Directory.readDirectory(filePath), value, rootPath, filePath + "/");
+                        if (resultFromDir)
+                            response = response.concat(resultFromDir);
                     }
-                }
+                });
                 return response;
             };
             const filesUrl = await getFilesUrl(files, value, rootPath);
@@ -118,7 +129,7 @@ class App {
                 for (const file of filesUrl) {
                     this.server.get(file.file_url, [upload.fields([])], async (req, res) => {
                         res.setHeader('content-type', mime.lookup(file.file_path));
-                        const _FILE = await File.readerFileData(file.file_path);
+                        const _FILE = await File.readData(file.file_path);
                         ((new Response()).data(_FILE, 200)).renderResponse(res);
                     });
                 }
@@ -169,9 +180,11 @@ class App {
 
         await directory.map(async (val, key) => {
             const file = val.getValue();
-            const route = file.getFileName().substring(0, file.getFileName().indexOf('.'));
-            if (route)
-                this.routes.add(JSON.parse(await file.readData())[0], route);
+            const route = file.getFileNameNoExt();
+            if (route) {
+                (await file.readData(true));
+                this.routes.add(JSON.parse((file.getData()).toString())[0], route);
+            }
         });
 
         return this.routes;
@@ -196,40 +209,33 @@ class App {
             })
         ];
     }
-    initConfigServer() {
+    async initConfigServer() {
 
         this.serverReceiveDataConfiguration().forEach(el => {
             this.server.use(el)
         });
 
-        this.server.engine('html', require('ejs').renderFile);
+        this.server.engine('html', ejs.renderFile);
         this.server.use(compression());
         this.server.set('view engine', 'html');
-        this.server.use('/public', express.static(Path.join(__dirname, 'public')));
+        this.server.use('/public', express.static(Directory.getAbsolutePath('./public')));
         this.server.use(express.json());
-        this.server.set('views', Path.join(__dirname, '/views'));
-        // this.server.use(this.generateCsrfToken);
+        this.server.set('views', Directory.getAbsolutePath('./views'));
         this.securityPass();
         this.requestLimiter();
-        this.initCorsConfig();
+        this.server.use(cors(JSON.parse(await this.corsFile.readData())));
         this.server.all('*', (req, res) => {
             Response.error(res, 404, 'Page Not Found');
         });
-        this.server.listen(this.envConfigurations.APP_PORT, this.envConfigurations.APP_URL, (err) => {
+        this.server.listen(this.envConfigurations.envConfigurations.APP_PORT, this.envConfigurations.envConfigurations.APP_URL, (err) => {
             if (err)
                 throw (err);
-            console.log("Server Started\nhttp://" + this.envConfigurations.APP_URL + ":" + this.envConfigurations.APP_PORT);
+            console.log("Server Started\nhttp://" + this.envConfigurations.envConfigurations.APP_URL + ":" + this.envConfigurations.envConfigurations.APP_PORT);
         });
 
     }
-
-    async initCorsConfig() {
-        const cors = require('cors');
-        this.server.use(cors(JSON.parse(await File.readerFileDataToString(File.getDirPath('config') + '/cors.json'))));
-    }
+    
     securityPass() {
-        const helmet = require("helmet");
-
         this.server.use(helmet.contentSecurityPolicy({
             directives: {
                 "script-src": ["'self'", "code.jquery.com", "cdn.jsdelivr.net"],
@@ -239,14 +245,14 @@ class App {
         this.server.use(helmet.xssFilter());
         this.server.use(helmet.referrerPolicy({ policy: 'same-origin' }));
     }
-    requestLimiter() {
-        const RateLimit = require("express-rate-limit");
 
+    requestLimiter() {
         this.server.use(RateLimit({
             windowMs: 1 * 60 * 1000,
             max: 20,
         }));
     }
+
     async migrationTable() {
         try {
             const mysql = new MySql();

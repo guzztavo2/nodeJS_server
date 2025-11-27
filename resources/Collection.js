@@ -72,6 +72,7 @@ class Collection {
                 collectionFiltered.add(val.getValue(), val.getKey());
         });
         this.collection = collectionFiltered.collection;
+        this.synchronize();
         return this;
     }
     async map(func_) {
@@ -98,7 +99,6 @@ class Collection {
         });
 
         this.collection.splice(index, 1);
-        this.synchronize();
         return this.synchronize();
     }
 

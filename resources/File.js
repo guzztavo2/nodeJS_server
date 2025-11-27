@@ -18,6 +18,9 @@ class File {
         return this.fileName;
     }
 
+    getFileNameNoExt(){
+        return this.fileName.substring(0 , this.fileName.lastIndexOf('.'))
+    }
     setFileName(fileName) {
         Utils.validateString(fileName, 'fileName');
         this.fileName = fileName;
@@ -33,7 +36,11 @@ class File {
 
     setPath(path) {
         Utils.validateString(path, 'path');
-        this.path = Directory.getAbsolutePath(path.substring(0, path.lastIndexOf(this.getFileName())));
+        if (path.lastIndexOf(this.getFileName()) != -1)
+            this.path = Directory.getAbsolutePath(path.substring(0, path.lastIndexOf(this.getFileName())));
+        else
+            this.path = Directory.getAbsolutePath(path);
+
     }
 
     async readData(force = false) {
@@ -42,6 +49,9 @@ class File {
         return this.data;
     }
 
+    getData(){
+        return this.data ?? false;
+    }
     exists() {
         return File.fileExists(this.getAbsolutePath());
     }
