@@ -70,6 +70,7 @@ class File {
         else
             return File.reWriteFile(this.getAbsolutePath(), data);
     }
+    
     static getActualProcessDir() {
         return Path.resolve(process.cwd());
     }

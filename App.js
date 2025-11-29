@@ -19,6 +19,7 @@ import RateLimit from "express-rate-limit";
 import helmet from 'helmet';
 import cors from 'cors';
 import Controller from './resources/Controller.js';
+import Utils from './resources/Utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,7 +43,7 @@ class App {
     }
 
     createServer() {
-        if (this.server == undefined)
+        if (Utils.is_empty(this.server))
             this.server = express();
         return this.server;
     }
@@ -72,7 +73,7 @@ class App {
                         const request = new Request(req, res);
                         const controller = (await (new (await Controller.findController(controllerArray[0]))()).setConfigFile(request));
                         const response = await controller[controllerArray[1]](request);
-                        if (typeof response !== 'undefined' && response !== undefined)
+                        if (!Utils.is_empty(response))
                             response.renderResponse(res);
                     } catch (err) {
                         isError = !isError
@@ -80,7 +81,6 @@ class App {
                     }
                 });
         });
-
         await this.defineStorageRoutes();
     }
 
@@ -113,7 +113,7 @@ class App {
                             filePath = Directory.getAbsolutePath(rootPath + file.getFileName());
 
                         const file_url = filePath.replace(rootPath, '/')
-                        response = response.concat({ file_url: file_url, file_path: filePath });
+                        response = response.concat({ file_url: encodeURI(file_url), file_path: filePath });
                     } else if (file instanceof Directory) {
                         if (filePath_ !== null)
                             filePath = Directory.getAbsolutePath(filePath_ + file.getDirectory());
@@ -176,7 +176,6 @@ class App {
     async readFilesRoutes() {
         const directory = await this.route_directory.readDirectory();
         await directory.filter(async (val) => val.getValue() instanceof File);
-
         await directory.map(async (val, key) => {
             const file = val.getValue();
             const route = file.getFileNameNoExt();

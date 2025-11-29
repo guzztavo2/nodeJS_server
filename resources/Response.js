@@ -1,11 +1,11 @@
 import fs from 'fs';
 import File from './File.js';
 import Directory from './Directory.js';
-import dotenv from 'dotenv';
-dotenv.config({ path: '../' })
+import Env from './Env.js';
 
 class Response {
     SERVER_SETTINGS;
+    env_configurations = Env.init();
     CONFIGURATION_LIST;
     HEADERS = [];
     dataToFront = {};
@@ -23,7 +23,7 @@ class Response {
             this.session = session;
     }
 
-    static error(res, status, error = null) {
+    static error(res, status = 404, error = null) {
         let data = {
             'title': 'Page of Error'
         };

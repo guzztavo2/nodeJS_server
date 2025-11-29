@@ -2,6 +2,7 @@ import File from './File.js'
 import Directory from './Directory.js';
 import dotenv from 'dotenv';
 import Encrypt from './Encrypt.js';
+import Utils from './Utils.js';
 
 class Env {
    static env_example = new File('.env-example', './');
@@ -46,8 +47,6 @@ class Env {
    }
 
    synchronizeDotEnv() {
-      dotenv.config({ path: this.env_file.getAbsolutePath() });
-
       this.env_configurations = {
          APP_NAME: process.env.APP_NAME,
          APP_SECRET: process.env.APP_SECRET,
@@ -57,6 +56,18 @@ class Env {
          APP_DEBUG: process.env.APP_DEBUG == 'true' ? true : false,
          APP_ENV: process.env.APP_ENV
       };
+
+      if (Utils.is_empty(this.env_configurations.APP_NAME) &&
+         Utils.is_empty(this.env_configurations.APP_SECRET) &&
+         Utils.is_empty(this.env_configurations.APP_URL) &&
+         Utils.is_empty(this.env_configurations.APP_PORT) &&
+         Utils.is_empty(this.env_configurations.DB_TYPE) &&
+         Utils.is_empty(this.env_configurations.APP_DEBUG) &&
+         Utils.is_empty(this.env_configurations.APP_ENV)) {
+         dotenv.config({ path: this.env_file.getAbsolutePath() });
+         return this.synchronizeDotEnv();
+      }
+
    }
 
    getEnvConfigurations() {
