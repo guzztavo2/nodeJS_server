@@ -5,7 +5,7 @@ class userController extends Controller {
         super(configFile);
     }
 
-    async index(request) {
+    index(request) {
         return this.response.data('Hello user!', 200);
     }
 }

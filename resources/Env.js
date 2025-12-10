@@ -6,57 +6,83 @@ import Utils from './Utils.js';
 
 class Env {
    static env_example = new File('.env-example', './');
-   env_path = Directory.getAbsolutePath('./');
-   env_file = new File('.env', this.env_path);
+   static env_path = Directory.getAbsolutePath('./');
+   static env_file = new File('.env', Env.env_path);
    env_configurations;
 
-   static async init() {
-      const env = new Env();
-      await env.checkEnv();
-      return env;
-   }
-
-   async checkEnv() {
-      if (!this.env_file.exists() || (await this.env_file.readData(true)).toString() == '') {
-         let data = (await Env.env_example.readData()).toString();
-         await this.env_file.create(data);
-         await this.generateAppSecret();
-      }
-      this.synchronizeDotEnv();
-   }
-
-   async generateAppSecret() {
-      try {
-         let data = (await this.env_file.readData(true)).toString();
-         const value = await this.getKeyFromEnvFile('APP_SECRET=');
-         if (!value || value.length < 10) {
-            data = data.replace('APP_SECRET=' + value, "APP_SECRET=" + Encrypt.generateString(40));
-            if (!await this.env_file.writeFile(data, false))
-               throw new Error("Not possible to generate APP_SECRET in .env file");
+   init() {
+      return (Env.env_example.readData()).then(data => {
+         if (!Env.env_file.exists()) {
+            Env.env_file.create(data.toString()).then();
          }
+
+         if (!Env.env_file.exists())
+            throw Error("Not possible create env_file");
+
+         return Env.env_file.readData().then(res => {
+            if (Utils.is_empty(res))
+               Env.env_file.writeFile(data, false).then();
+            this.generateAppSecret();
+            this.synchronizeDotEnv();
+         });
+      });
+   }
+
+   generateAppSecret() {
+      try {
+         Env.env_file.readData(true).then(data => {
+            this.getKeyFromEnvFile('APP_SECRET').then(value => {
+               if (!value || value.length < 10) {
+                  data = data.replace('APP_SECRET=' + value, "APP_SECRET=" + Encrypt.generateString(40));
+                  Env.env_file.writeFile(data, false).then(res => {
+                     if (!res)
+                        throw new Error("Not possible to generate APP_SECRET in .env file");
+                  });
+               }
+            })
+
+         });
+
 
       } catch (err) {
          throw new Error(err);
       }
    }
 
-   async getKeyFromEnvFile(key_to_find) {
-      const data = (await this.env_file.readData()).toString();
-      let aux = (data.substring(data.indexOf(key_to_find)));
-      return aux.substring(key_to_find.length, aux.indexOf('\n')).trim();
+   getKeyFromEnvFile(key_to_find) {
+      return Env.env_file.readData(true).then(data => {
+         key_to_find += "="
+         let aux = (data.substring(data.indexOf(key_to_find)));
+         return aux.substring(key_to_find.length, aux.indexOf('\n')).trim();
+      });
+   }
+
+   async updateEnvConfigurqations() {
+      const envFinal = {};
+      ((await Env.env_file.readData(true)).toString().split("\n")).map((val, _) => {
+         const splited = ((val.trim()).split('=')).map(val => val.trim());
+         envFinal[splited[0]] = splited[1];
+      });
+
+      return envFinal
    }
 
    synchronizeDotEnv() {
       this.env_configurations = {
-         APP_NAME: process.env.APP_NAME,
-         APP_SECRET: process.env.APP_SECRET,
-         APP_URL: process.env.APP_URL,
-         APP_PORT: process.env.APP_PORT,
-         DB_TYPE: process.env.DB_TYPE,
-         APP_DEBUG: process.env.APP_DEBUG == 'true' ? true : false,
-         APP_ENV: process.env.APP_ENV
-      };
-
+         'APP_NAME': process.env.APP_NAME ?? null,
+         'APP_SECRET': process.env.APP_SECRET ?? null,
+         'APP_ENV': process.env.APP_ENV ?? null,
+         'APP_DEBUG': process.env.APP_DEBUG ?? null,
+         'APP_URL': process.env.APP_URL ?? null,
+         'APP_PORT': process.env.APP_PORT ?? null,
+         'DB_TYPE': process.env.DB_TYPE ?? null,
+         'DB_HOST': process.env.DB_HOST ?? null,
+         'DB_USERNAME': process.env.DB_USERNAME ?? null,
+         'DB_PASSWORD': process.env.DB_PASSWORD ?? null,
+         'DB_PORT': process.env.DB_PORT ?? null,
+         'DB_NAME': process.env.DB_NAME ?? null,
+         'LANGUAGE': process.env.LANGUAGE ?? null
+      }
       if (Utils.is_empty(this.env_configurations.APP_NAME) &&
          Utils.is_empty(this.env_configurations.APP_SECRET) &&
          Utils.is_empty(this.env_configurations.APP_URL) &&
@@ -64,7 +90,7 @@ class Env {
          Utils.is_empty(this.env_configurations.DB_TYPE) &&
          Utils.is_empty(this.env_configurations.APP_DEBUG) &&
          Utils.is_empty(this.env_configurations.APP_ENV)) {
-         dotenv.config({ path: this.env_file.getAbsolutePath() });
+         Env.synchronizeDotEnv();
          return this.synchronizeDotEnv();
       }
 
@@ -72,6 +98,10 @@ class Env {
 
    getEnvConfigurations() {
       return this.env_configurations;
+   }
+
+   static synchronizeDotEnv(){
+      dotenv.config({ path: Env.env_file.getAbsolutePath() });
    }
 }
 

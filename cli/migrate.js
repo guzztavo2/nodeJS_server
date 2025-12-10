@@ -1,47 +1,24 @@
-const fs = require('fs');
-const MySql = require('../resources/MySql');
-const { exit } = require('process');
-require('dotenv').config()
+import fs from 'fs';
+import MySql from '../resources/MySql.js';
+import { exit } from 'process';
+import dotenv from 'dotenv';
+import Directory from '../resources/Directory.js';
+dotenv.config()
+
+const migrationFolderPath = new Directory("migrations", './');
+
+if (!await migrationFolderPath.isDirectory())
+    throw Error("Not possible with no migrations folder");
 
 console.log("You can pass dir's name to migrate:\n\tExample: node cli/migrate.js test/example/.\n\tResult Migration: migrations/test/example\n\n");
 
-const changeDirectory = () => {
-    let directory = process.argv[1];
-    directory = directory.split('/');
-    directory.pop();
-    directory = directory.join('/');
-    process.chdir(directory)
-}
-
-const getRealPath = () => {
-    changeDirectory();
-    const path = "../migrations/"
-    try {
-        fs.realpathSync(path);
-    }
-    catch {
-        return "./migrations/";
-    }
-    return path;
-}
-
-const path = getRealPath();
-
-const folderMigration = process.argv[2] == null ? path : path + process.argv[2];
-let files = [];
-try {
-    files = fs.readdirSync(folderMigration)
-} catch {
-    throw Error("\n\nNot possible examine this dir: \n" + folderMigration);
-}
-
-files = files.sort((a, b) => a < b ? -1 : 1)
+let files = (await migrationFolderPath.readDirectory()).toArray().sort((a, b) => a.getFileName() < b.getFileName() ? -1 : 1);
 
 const mysql = new MySql();
 
 const createMigrationTableIfNotExist = async (mysql) => {
     const res = await mysql.verifyTableExist('migrations');
-    if (res == false)
+    if (!res)
         await mysql.createMigrationTable();
 }
 
@@ -56,9 +33,9 @@ async function createTable(result, mysql, migration, callback) {
             ...query, ...object
         };
         callback(el);
-
     });
-    await mysql.createTable(migration.table_name, query).then().catch(err => { throw Error(err) })
+    
+    await mysql.createTable(migration.table_name, query);
 }
 async function alterTable(result, mysql, migration, callback) {
     let query = {};
@@ -78,7 +55,13 @@ async function alterTable(result, mysql, migration, callback) {
 
 const useFiles = async (files, folderMigration, mysql) => {
 
-    return await new Promise(async (res, err) => {
+    const result = await mysql.selectAll("migrations").then(res =>{
+        console.log(res);
+    }).catch(err => {
+        console.error(err);
+    })
+
+    return new Promise(async (res, err) => {
         try {
             await createMigrationTableIfNotExist(mysql);
 
@@ -86,6 +69,8 @@ const useFiles = async (files, folderMigration, mysql) => {
 
             let names = [];
 
+            const result = await mysql.selectAll("migrations");
+            console.log(result);
             await mysql.selectAll('migrations').then(res => {
                 if (res == 0) return;
 
@@ -184,7 +169,7 @@ async function createTableOrUpdate(mysql, migration) {
     });
 }
 
-useFiles(files, folderMigration, mysql).then(res => {
+await useFiles(files, migrationFolderPath, mysql).then(res => {
     console.log(`\n\nMigrate as successful, tables created in table database.\nCreated: ${res.length} tables`);
     if (res.length > 0)
         console.log(`\tList of files migrated:\n${res.join('\n')}\n`)

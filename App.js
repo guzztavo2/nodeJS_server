@@ -28,18 +28,26 @@ const upload = multer();
 class App {
     env_configurations;
     server;
-    route_directory = new Directory('routes', './routes');
-    middleware_directory = new Directory('middlewares', './middlewares');
-    cors_file = new File('cors.json', './config');
-    routes = new Collection();
-    
+    route_directory;
+    middleware_directory;
+    cors_file;
+    routes;
 
-    async startServer() {
-        this.createServer();
-        await this.createConfigurations();
-        await this.defineRoutes();
-        await this.initConfigServer();
-        // await this.migrationTable();
+    constructor() {
+        this.env_configurations = new Env();
+        this.route_directory = new Directory('routes', './routes');
+        this.middleware_directory = new Directory('middlewares', './middlewares');
+        this.cors_file = new File('cors.json', './config');
+        this.routes = new Collection();
+    }
+
+    startServer() {
+        this.env_configurations.init().then(() => {
+            this.createServer();
+            this.defineRoutes();
+            this.initConfigServer();
+            this.migrationTable();
+        })
     }
 
     createServer() {
@@ -48,40 +56,47 @@ class App {
         return this.server;
     }
 
-    async createConfigurations() {
-        this.env_configurations =  await Env.init();
-    }
-
     expressSession() {
-        this.server.use(express_session({
+        this.env_configurations.init().then(_ => this.server.use(express_session({
             secret: this.env_configurations.getEnvConfigurations().APP_SECRET,
             resave: false,
             saveUninitialized: false,
             cookie: { secure: this.env_configurations.getEnvConfigurations().APP_ENV === 'production' }
-        }));
+        })));
     }
 
-    async defineRoutes() {
+    defineRoutes() {
         this.expressSession();
         var isError = false;
-        const routes_ = await this.readFilesRoutes();
-        await this.getRoutes(routes_, (route) => {
-            const controllerArray = typeof route.controller == 'string' && route.controller.length > 0 ? route.controller.split('::') : '';
-            this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares.toArray(),
-                this.serverReceiveDataConfiguration()), async (req, res) => {
-                    try {
-                        const request = new Request(req, res);
-                        const controller = (await (new (await Controller.findController(controllerArray[0]))()).setConfigFile(request));
-                        const response = await controller[controllerArray[1]](request);
-                        if (!Utils.is_empty(response))
-                            response.renderResponse(res);
-                    } catch (err) {
-                        isError = !isError
-                        Response.error(res, 404, err)
-                    }
-                });
+        this.readFilesRoutes().then(routes => {
+            this.getRoutes(routes, (route) => {
+                const controllerArray = typeof route.controller == 'string' && route.controller.length > 0 ? route.controller.split('::') : '';
+                this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares.toArray(),
+                    this.serverReceiveDataConfiguration()), (req, res) => {
+                        try {
+                            const request = new Request(req, res);
+                            (Controller.findController(controllerArray[0])).then(controller_ => {
+                                const controller = (new controller_()).setConfigFile(request);
+                                const response = controller[controllerArray[1]](request);
+
+                                if (response instanceof Promise)
+                                    response.then(response_ => {
+                                        if (!Utils.is_empty(response_))
+                                            response_.renderResponse(res);
+                                    }).catch(err => { throw err });
+                                else
+                                    if (!Utils.is_empty(response))
+                                        response.renderResponse(res);
+
+                            })
+                        } catch (err) {
+                            isError = !isError
+                            Response.error(res, 404, err)
+                        }
+                    });
+            });
         });
-        await this.defineStorageRoutes();
+
     }
 
     async defineStorageRoutes() {
@@ -96,7 +111,7 @@ class App {
 
             const rootPath = File.getActualProcessDir() + Directory.getAbsolutePath(value.root) + '/'
             let files = await Directory.readDirectory(rootPath);
-            if(!value.is_recursive)
+            if (!value.is_recursive)
                 files = await files.filter((value) => value.getValue() instanceof File);
             const getFilesUrl = async (files, value, rootPath, filePath_ = null) => {
                 let response = [];
@@ -140,59 +155,82 @@ class App {
         }
     }
 
-    async getRoutes(routesFromFile, callback) {
-        await routesFromFile.map(async (val, key) => {
-            const key_ = val.getKey();
-            let route = val.getValue();
+    getRoutes(routesFromFile, callback) {
+        routesFromFile.map((val) => {
+            const key = val.getKey();
+            const route_ = val.getValue();
 
-            if (key_ !== 'web')
-                if (route.url.length > 1)
-                    route['url'] = '/' + key_ + route.url + '/';
+            if (key !== 'web')
+                if (route_.url.length > 1)
+                    route_['url'] = '/' + key + route_.url + '/';
                 else
-                    route['url'] = '/' + key_ + '/';
+                    route_['url'] = '/' + key + '/';
 
-            route = await this.checkMiddlewares(route);
-            callback(route);
+            this.checkMiddlewares(route_).then(route => callback(route));
         });
     }
 
-    async checkMiddlewares(route) {
+    checkMiddlewares(route) {
         const middlewares = new Collection();
-        if (route.middlewares && route.middlewares.length > 0)
-            for (const middleware_ of route.middlewares) {
-                let middlewaresFiles = await this.middleware_directory.readDirectory();
-                await (middlewaresFiles.filter(async (val) => val.getValue() instanceof File));
-                await middlewaresFiles.map(async (val, key) => {
-                    const mod = (await import(val.getValue().getAbsolutePath()));
-                    const middleware = mod.default || mod;
-                    if (middleware.identifier == middleware_)
-                        middlewares.add(middleware.next);
+
+        if (!route.middlewares || route.middlewares.length === 0) {
+            route.middlewares = middlewares;
+            return Promise.resolve(route);
+        }
+
+        return this.middleware_directory.readDirectory().then(middlewaresFiles =>
+            middlewaresFiles.filter(val => val.getValue() instanceof File)).then(
+                middlewaresFiles => {
+                    const tasks = middlewaresFiles.collection.map(val => {
+                        const file = val.getValue();
+                        const abs = file.getAbsolutePath();
+
+                        const imports = route.middlewares.map(identifier => {
+
+                            return import(abs).then(mod => {
+                                const middleware = mod.default || mod;
+
+                                if (middleware.identifier === identifier)
+                                    middlewares.add(middleware.next);
+
+                            });
+                        });
+
+                        return Promise.all(imports);
+                    });
+                    return Promise.all(tasks).then(() => {
+                        route.middlewares = middlewares;
+                        return route;
+                    });
                 });
-            }
-        route.middlewares = middlewares;
-        return route;
     }
 
-    async readFilesRoutes() {
-        const directory = await this.route_directory.readDirectory();
-        await directory.filter(async (val) => val.getValue() instanceof File);
-        await directory.map(async (val, key) => {
-            const file = val.getValue();
-            const route = file.getFileNameNoExt();
-            if (route) {
-                (await file.readData(true));
-                this.routes.add(JSON.parse((file.getData()).toString())[0], route);
-            }
+    readFilesRoutes() {
+        return this.route_directory.readDirectory().then(collection => {
+            return collection.filter(val => val.getValue() instanceof File);
+        }).then(collection => {
+
+            const tasks = collection.map(val => {
+                const file = val.getValue();
+                const route = file.getFileNameNoExt();
+
+                if (!route) return Promise.resolve();
+
+                return file.readData(true).then(data => {
+                    this.routes.add(JSON.parse(data)[0], route);
+                });
+            });
+
+            return Promise.resolve(tasks).then(() => this.routes);
         });
-
-        return this.routes;
     }
 
-    async findController(controller, request) {
+    findController(controller, request) {
         try {
-            const mod = (await import(Directory.getAbsolutePath("./controllers/" + controller + ".js")));
-            const controllerPage = mod.default || mod;
-            return (await (new controllerPage()).setConfigFile(this.env_configurations.getEnvConfigurations(), request));
+            return import(Directory.getAbsolutePath("./controllers/" + controller + ".js")).then(mod => {
+                const controller = mod.default || mod;
+                return (new controller()).setConfigFile(this.env_configurations.getEnvConfigurations(), request);
+            })
         }
         catch (err) {
             throw new Error(err);
@@ -208,7 +246,7 @@ class App {
             })
         ];
     }
-    async initConfigServer() {
+    initConfigServer() {
 
         this.serverReceiveDataConfiguration().forEach(el => {
             this.server.use(el)
@@ -222,10 +260,12 @@ class App {
         this.server.set('views', Directory.getAbsolutePath('./views'));
         this.securityPass();
         this.requestLimiter();
-        this.server.use(cors(JSON.parse(await this.cors_file.readData())));
-        this.server.all('*', (req, res) => {
-            Response.error(res, 404, 'Page Not Found');
+        this.cors_file.readData().then(data => {
+            this.server.use(cors(JSON.parse(data)));
         });
+        // this.server.all('*', (req, res) => {
+        //     Response.error(res, 404, 'Page Not Found');
+        // });
         this.server.listen(this.env_configurations.getEnvConfigurations().APP_PORT, this.env_configurations.getEnvConfigurations().APP_URL, (err) => {
             if (err)
                 throw (err);
@@ -233,7 +273,7 @@ class App {
         });
 
     }
-    
+
     securityPass() {
         this.server.use(helmet.contentSecurityPolicy({
             directives: {
@@ -252,18 +292,17 @@ class App {
         }));
     }
 
-    async migrationTable() {
-        try {
-            const mysql = new MySql();
-            const res = await mysql.verifyTableExist('migrations');
+    migrationTable() {
+        const mysql = new MySql();
+        mysql.verifyTableExist('migrations').then(res => {
             const existMigration = res != 0;
-
             if (!existMigration)
-                await mysql.createMigrationTable();
-        } catch (err) {
-            console.log(err);
-        } return;
-    }
+                mysql.createMigrationTable().then();
+        }).catch(err => {
+            throw err;
+        })
 
+
+    }
 }
 export default App;

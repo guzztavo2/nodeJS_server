@@ -1,19 +1,21 @@
 import mysql from 'mysql';
+import Env from './Env.js'
 class MySql {
-    connection; host; user; password; database;
+    connection; host; user; password; database; port;
 
     constructor() {
-
         this.host = process.env.DB_HOST ?? null;
         this.user = process.env.DB_USERNAME ?? null;
         this.password = process.env.DB_PASSWORD ?? null;
         this.database = process.env.DB_NAME ?? null;
+        this.port = process.env.DB_PORT ?? null;
 
         if (this.database == null)
             this.connection = mysql.createConnection({
                 host: this.host,
                 user: this.user,
                 password: this.password,
+                port: this.port ?? undefined
             });
         else
             this.connection = mysql.createConnection({
@@ -21,6 +23,7 @@ class MySql {
                 user: this.user,
                 password: this.password,
                 database: this.database,
+                port: this.port ?? undefined
             });
     }
 
@@ -44,22 +47,43 @@ class MySql {
                 database: database,
             });
     }
+
     createDatabase(database_name) {
         this.verifyConnection();
 
-        this.connection.query("CREATE DATABASE " + database_name, function (err, result) {
-            if (err) throw err;
-        });
+        return new Promise((res, error_) => {
+            this.connection.query("")
+            this.connection.query("CREATE DATABASE " + database_name, function (err, result) {
+                if (err) error_(err);
+                else res(result);
+            });
+        })
+
+    }
+
+    checkDatabaseExists() {
+        return new Promise((res, rej) => {
+            this.connection.query(`SHOW DATABASES LIKE '${this.database}'`, (err, result) => {
+                if (err) rej(err);
+                else res(result);
+            })
+        })
     }
     useOtherDatabase(database_name) {
         return new MySql(this.host, this.user, this.password, database_name);
     }
+
     verifyConnection() {
         if (!this.connection._connectCalled)
             this.connection.connect((err) => {
-                if (err) throw err;
+                if (err)
+                    throw err;
+                else
+                    return true;
             });
+
     }
+
     createTable(table_name, names_types) {
         this.verifyConnection();
 
@@ -78,7 +102,7 @@ class MySql {
 
         return new Promise((res, error) => {
             this.connection.query(sql, (err, result) => {
-                if (err) error(err);
+                if (err) return error(err);
                 res(result);
             });
         })
@@ -129,22 +153,23 @@ class MySql {
 
     }
 
-    selectAll(table, keys = null) {
+    async selectAll(table, keys = null) {
         this.verifyConnection();
 
-        return new Promise((res, error) => {
+        return await new Promise((res, error) => {
             if (keys == null)
-                this.connection.query("SELECT * FROM " + table, (err, result, fields) => {
+                return this.connection.query("SELECT * FROM " + table, (err, result, fields) => {
                     if (err) error(err);
                     res(result);
                 });
             else
-                this.connection.query("SELECT " + keys.join(",") + " FROM " + table, (err, result, fields) => {
+                return this.connection.query("SELECT " + keys.join(",") + " FROM " + table, (err, result, fields) => {
                     if (err) error(err);
-                    return res(result);
+                    res(result);
                 });
         });
     }
+
     selectAllKeys(table, keys = null) {
         this.verifyConnection();
 
@@ -174,6 +199,7 @@ class MySql {
             });
         });
     }
+
     getPosition(table, column) {
         this.verifyConnection();
 
@@ -184,6 +210,7 @@ class MySql {
             });
         });
     }
+
     getForeignKeys(table = null, column = null, referenced_table_name = null, referenced_column_name = null) {
         this.verifyConnection();
 
@@ -247,6 +274,7 @@ class MySql {
             });
         });
     }
+
     getPositions(table) {
         this.verifyConnection();
 
@@ -257,7 +285,6 @@ class MySql {
             });
         });
     }
-
 
     async addConstraint(table_name, constraints) {
         const keys = Object.keys(constraints);
@@ -343,6 +370,7 @@ class MySql {
             });
         }
     }
+
     deleteFromTable(table_name, keys, values) {
         values.forEach((value, key) => {
             values[key] = "'" + value + "'"
@@ -392,6 +420,7 @@ class MySql {
             });
         });
     }
+
     raw(query) {
         return new Promise((res, reject) => {
             this.connection.query(query, (err, result) => {
@@ -403,11 +432,14 @@ class MySql {
         })
     }
 
-    async createMigrationTable() {
-        return await this.createTable("migrations", {
+    createMigrationTable() {
+        return this.createTable("migrations", {
             "id": "bigint unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT",
             "name": "varchar(255) NOT NULL"
-        }).then().catch(err => { throw Error(err) });
+        }).then(() => true).catch(() => {
+            throw Error(`Not possible create Migration table in database ${this.database}`);
+        })
     }
+
 }
 export default MySql;

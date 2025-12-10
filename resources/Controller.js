@@ -1,14 +1,10 @@
 import Response from './Response.js';
-import Env from './Env.js';
 import Directory from './Directory.js';
 class Controller {
     response;
     session;
-    envConfig;
 
-    async setConfigFile(request) {
-        this.envConfig = await Env.init();
-        this.envConfig.synchronizeDotEnv();
+    setConfigFile(request) {
         this.response = new Response(request.session);
         this.session = request.session;
         if (this.title !== undefined)
@@ -34,14 +30,10 @@ class Controller {
         request.session.create('responses', session)
     }
 
-    static async findController(controller) {
-        try {
-            const mod = (await import(Directory.getAbsolutePath("./controllers/" + controller + ".js")));
+    static findController(controller) {
+        return import(Directory.getAbsolutePath("./controllers/" + controller + ".js")).then(mod => {
             return mod.default || mod;
-        }
-        catch (err) {
-            throw new Error(err);
-        }
+        });
     }
 }
 

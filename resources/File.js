@@ -1,8 +1,8 @@
-import fs from 'fs';
-import Path from 'path';
-import Promise from '../resources/Promise.js';
-import Utils from './Utils.js';
-import Directory from './Directory.js';
+import fs from "fs";
+import Path from "path";
+// import Promise from "../resources/Promise.js";
+import Utils from "./Utils.js";
+import Directory from "./Directory.js";
 
 class File {
     fileName;
@@ -18,8 +18,8 @@ class File {
         return this.fileName;
     }
 
-    getFileNameNoExt(){
-        return this.fileName.substring(0 , this.fileName.lastIndexOf('.'))
+    getFileNameNoExt() {
+        return this.fileName.substring(0, this.fileName.lastIndexOf('.'))
     }
     setFileName(fileName) {
         Utils.validateString(fileName, 'fileName');
@@ -43,13 +43,18 @@ class File {
 
     }
 
-    async readData(force = false) {
-        if (!this.data || force)
-            this.data = await File.readData(this.getAbsolutePath());
-        return this.data;
+    readData(force = false) {
+        if (!this.data || force) {
+            return File.readData(this.getAbsolutePath())
+                .then((res) => {
+                    this.data = res;
+                    return this.data;
+                });
+        }
+        return Promise.resolve(this.data);
     }
 
-    getData(){
+    getData() {
         return this.data ?? false;
     }
     exists() {
@@ -61,16 +66,20 @@ class File {
     }
 
     create(data = null) {
-        return File.createFile(this.getAbsolutePath(), data);
+        File.createFile(this.getAbsolutePath(), data).then(data => {
+            this.data = data;
+        }).finally(() => {
+            return this.data;
+        })
     }
 
-    async writeFile(data, append = true) {
+    writeFile(data, append = true) {
         if (append)
             return File.appendWriteFile(this.getAbsolutePath(), data);
         else
             return File.reWriteFile(this.getAbsolutePath(), data);
     }
-    
+
     static getActualProcessDir() {
         return Path.resolve(process.cwd());
     }
@@ -87,29 +96,21 @@ class File {
             .catch(err => { throw err; });
     }
 
-    static async readData(path) {
+    static readData(path) {
         return (new Promise((res, rej) => {
-            fs.readFile(path, (err, data) => {
-                if (err)
-                    rej(err);
-                else
-                    res(data);
-            })
-        })).then(data => {
-            return data;
-        }).catch(err => {
-            throw err;
-        });
+            fs.readFile(path, "utf8", (err, data) => {
+                if (err) rej(err);
+                res(data);
+            });
+        }));
     }
 
     static delete(directory) {
         fs.unlinkSync(directory);
     }
 
-    static async createFile(path, data = null) {
-        await (File.reWriteFile(path, data ?? ''));
-        this.data = data;
-        return this.isFile(path);
+    static createFile(path, data = null) {
+        return (File.reWriteFile(path, data ?? ''));
     }
 
     static reWriteFile(path, data) {
@@ -124,12 +125,12 @@ class File {
 
     static appendWriteFile(path, data) {
         return new Promise((res, rej) => {
-        fs.writeFile(path, data, { flag: 'a' }, (err) => {
-            if (err)
-                rej("Não foi possivel adicionar mais ao arquivo: " + err);
-            res(true);
+            fs.writeFile(path, data, { flag: 'a' }, (err) => {
+                if (err)
+                    rej("Não foi possivel adicionar mais ao arquivo: " + err);
+                res(true);
+            });
         });
-    });
 
     }
 

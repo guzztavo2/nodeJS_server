@@ -5,19 +5,19 @@ import Env from './Env.js';
 
 class Response {
     SERVER_SETTINGS;
-    env_configurations = Env.init();
-    CONFIGURATION_LIST;
+    env_configuration;
     HEADERS = [];
     dataToFront = {};
     session;
     response;
 
     constructor(session = null) {
-        this.CONFIGURATION_LIST = {
+        this.env_configuration = {
             APP_URL: process.env.APP_URL == '' || typeof process.env.APP_URL !== 'string' ? 'localhost' : process.env.APP_URL,
             APP_PORT: process.env.APP_PORT ?? 3000
         }
-        this.SERVER_SETTINGS = this.CONFIGURATION_LIST['APP_URL'] + ":" + this.CONFIGURATION_LIST['APP_PORT'];
+        this.SERVER_SETTINGS = this.env_configuration['APP_URL'] + ":" + this.env_configuration['APP_PORT'];
+
 
         if (session !== null)
             this.session = session;
@@ -56,7 +56,7 @@ class Response {
     view(file_dir, status = 200, data) {
         file_dir = this.checkFile(file_dir);
         return new ResponseType('view', file_dir, status,
-            { HOME_URL: this.CONFIGURATION_LIST['APP_URL'] + ":" + this.CONFIGURATION_LIST['APP_PORT'] },
+            { HOME_URL: this.env_configuration['APP_URL'] + ":" + this.env_configuration['APP_PORT'] },
             Object.assign(this.dataToFront, data), this.HEADERS
         );
     };

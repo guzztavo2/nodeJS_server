@@ -1,6 +1,5 @@
 import fs, { Dir } from 'fs';
-import Path from 'path';
-import Promise from './Promise.js';
+import Path, { resolve } from 'path';
 import Utils from './Utils.js';
 import File from './File.js';
 import Collection from './Collection.js';
@@ -21,21 +20,28 @@ class Directory {
     getPath() {
         return this.path;
     }
+
     getAbsolutePath() {
         return Path.resolve(this.path, this.directory);
     }
+
     setDirectory(directory) {
         Utils.validateString(directory, 'directory');
         this.directory = directory;
     }
-    readDirectory(){
+
+    readDirectory() {
         return Directory.readDirectory(this.getAbsolutePath());
     }
+
     setPath(path) {
         Utils.validateString(path, 'path');
         this.path = Directory.getAbsolutePath(path);
     }
 
+    isDirectory() {
+        return Directory.isDirectory(this.getAbsolutePath());
+    }
     static async isDirectory(fileDir) {
         return (new Promise((res, error) => {
             fs.stat(fileDir, (err, stats) => {
@@ -51,33 +57,33 @@ class Directory {
         return Path.resolve(process.cwd(), dir);
     }
 
-    static async readDirectory(dir) {
-        return (new Promise((res) => {
-            fs.readdir(dir, (err, files) => {
-                if (err) throw err;
-                res(files);
+    static readDirectory(directory) {
+        return new Promise((resolve, reject) => {
+            fs.readdir(directory, (err, files) => {
+                if (err) return reject(err);
+
+                const collection = new Collection();
+                
+                const tasks = files.map(val => {
+                    const file = directory + "/" + val;
+                    const file_name = file.substring(file.lastIndexOf(Path.sep) + 1);
+                    const absPath = Directory.getAbsolutePath(file);
+
+                    return File.isFile(absPath).then(isFile => {
+                        if (isFile) {
+                            collection.add(new File(file_name, absPath));
+                            return;
+                        }
+                        return Directory.isDirectory(absPath).then(isDirectory => {
+                            if (isDirectory) {
+                                collection.add(new Directory(file_name, absPath));
+                            }
+                        });
+                    });
+                });
+
+                Promise.all(tasks).then(() => resolve(collection));
             });
-        })).then(async res => {
-            const collection = new Collection();
-
-            await Collection.createFromArrayObjects(res).map(async (val, key) => {
-                const file = dir + "/" + val.getValue();
-                if (file instanceof Directory || file instanceof File)
-                    return "continue";
-
-                const file_name = file.substring(file.lastIndexOf(Path.sep) + 1);
-
-                if (await File.isFile(Directory.getAbsolutePath(file)))
-                    collection.add(new File(file_name, Directory.getAbsolutePath(file)))
-                else if (await Directory.isDirectory(Directory.getAbsolutePath(file)))
-                    collection.add(new Directory(file_name, Directory.getAbsolutePath(file)));
-                else
-                    throw new Error('Unknown file system object: ' + file);
-            });
-
-            return collection;
-        }).catch(err => {
-            throw err;
         });
     }
 }

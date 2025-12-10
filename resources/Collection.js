@@ -4,10 +4,12 @@ class Collection {
     collection = [];
 
     constructor(array = null) {
-        if (array)
-            this.createFromArrayObjects(array);
+        this.initPromise = array ? this.createFromArrayObjects(array) : Promise.resolve(this);
     }
 
+    ready() {
+        return this.initPromise;
+    }
     getLength() {
         return this.collection.length;
     }
@@ -15,7 +17,7 @@ class Collection {
     synchronize() {
         const collection = new Collection();
         collection.collection = this.collection;
-        collection.map((value_, index_) => collection[index_] = value_.getValue() );
+        collection.map((value_, index_) => collection[index_] = value_.getValue());
 
         return collection;
     }
@@ -63,33 +65,42 @@ class Collection {
             return val;
         })
     }
-    async filter(func_) {
+    filter(func_) {
         const collectionFiltered = new Collection();
-        await this.map(async (val, key) => {
-            const resultFrom = await func_(val, key);
+        return this.ready().then(() => {
+            const tasks = this.collection.map((val, key) => {
 
-            if (resultFrom)
-                collectionFiltered.add(val.getValue());
+                return Promise.resolve(func_(val, key)).then(res => {
+                    if (res)
+                        collectionFiltered.add(val.getValue());
+                });
+            });
+
+            return Promise.all(tasks).then(() => collectionFiltered);
         });
-        return collectionFiltered;
     }
-    async map(func_) {
-        const collectionMapped = new Collection();
-        for (let i = 0; i < this.collection.length; i++) {
-            const val = this.getByIndex(i);
-            const resultFrom = await func_(this.collection[i], i);
 
-            if (typeof resultFrom == "string" || !resultFrom)
-                if (!resultFrom || resultFrom.toLowerCase() == "continue") continue;
-                else if (resultFrom.toLowerCase() == "break") break;
+    map(func_) {
+        const promises = this.collection.map((item, i) => Promise.resolve(func_(item, i)));
+        return Promise.all(promises).then(results => {
 
-            if (resultFrom instanceof TypeCollection) {
-                collectionMapped.collection[i] = resultFrom;
-                collectionMapped[i] = resultFrom;
+            const collectionMapped = new Collection();
+            for (let i = 0; i < results.length; i++) {
+                const result = results[i];
+
+                if (typeof result == "string" || !result)
+                    if (!result || result.toLowerCase() == "continue") continue;
+                    else if (result.toLowerCase() == "break") break;
+
+                if (result instanceof TypeCollection) {
+                    collectionMapped.collection[i] = result;
+                    collectionMapped[i] = result;
+                }
+
             }
+            return collectionMapped;
+        });
 
-        }
-        return collectionMapped;
     }
 
     removeByKey(key) {
@@ -145,9 +156,12 @@ class Collection {
 
     createFromArrayObjects(array_) {
         Utils.validateArray(array_, 'array_');
-        for (let value of array_)
-            this.add(typeof value == "object" ? Object.assign({}, value) : value).getLength() - 1;
-        return this;
+        return Promise.resolve(array_).then(resolvedArray => {
+            for (let value of resolvedArray) {
+                this.add(typeof value === "object" ? Object.assign({}, value) : value).getLength() - 1;
+            }
+            return this;
+        });
     }
 
     static createFromArrayObjects(array_) {
@@ -156,12 +170,7 @@ class Collection {
     }
 
     toArray() {
-        const array_ = [];
-        this.map(val => {
-            array_.push(val.getValue());
-        })
-
-        return array_;
+        return this.collection.map(val => val.getValue());
     }
 
     static toArray(collection) {

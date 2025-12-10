@@ -28,11 +28,13 @@ class Migration {
         this.size = this.vars.push(migration);
         return migration;
     }
+
     mediumText(var_name) {
         const migration = new Column(var_name, "MEDIUMTEXT");
         this.size = this.vars.push(migration);
         return migration;
     }
+
     mediumBlob(var_name) {
         const migration = new Column(var_name, "MEDIUMBLOB");
         this.size = this.vars.push(migration);
@@ -111,45 +113,42 @@ class Migration {
         return migration;
     }
 
-    date() {
+    date(var_name) {
         const migration = (new Column(var_name, "DATE"));
         this.size = this.vars.push(migration);
         return migration;
     }
     
-    dateTime() {
+    dateTime(var_name) {
         const migration = (new Column(var_name, "DATETIME"));
         this.size = this.vars.push(migration);
         return migration;
     }
     
-    timeStamp() {
+    timeStamp(var_name) {
         const migration = (new Column(var_name, "TIMESTAMP"));
         this.size = this.vars.push(migration);
         return migration;
     }
     
-    time() {
-        const migration = (new Column(var_name, "TIMESTAMP"));
-        this.size = this.vars.push(migration);
-        return migration;
-    }
-    
-    year() {
-        const migration = (new Column(var_name, "TIMESTAMP"));
-        this.size = this.vars.push(migration);
-        return migration;
-    }
-    
-    bool() {
+    bool(var_name) {
         const migration = (new Column(var_name, "TINYINT", '1'));
         this.size = this.vars.push(migration);
         return migration;
     }
 
     createdAt(){
-        
+        const migration = (new Column('created_at', "TIMESTAMP", null)).default("CURRENT_TIMESTAMP");
+        this.size = this.vars.push(migration);
+        return migration;
     }
+    
+    updatedAt(){
+        const migration = (new Column('created_at', "TIMESTAMP", null)).default("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+        this.size = this.vars.push(migration);
+        return migration;
+    }
+
 }
 
 class Column {
@@ -188,7 +187,7 @@ class Column {
         return this;
     }
 
-    unique(unique = false) {
+    unique(unique = true) {
         this.unique_var = unique;
         return this;
     }
