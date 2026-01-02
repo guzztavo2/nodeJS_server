@@ -1,7 +1,8 @@
-const Encrypt = require('./Encrypt');
-const MySql = require('./MySql');
-const File = require('./File');
-const Collection = require('./Collection');
+import Encrypt from './Encrypt';
+import MySql from './MySql.js';
+import File from './File.js';
+import Collection from './Collection.js';
+
 class Model {
     typeModel;
 

@@ -12,9 +12,10 @@ class Response {
     response;
 
     constructor(session = null) {
+        Env.synchronizeDotEnv();
         this.env_configuration = {
-            APP_URL: process.env.APP_URL == '' || typeof process.env.APP_URL !== 'string' ? 'localhost' : process.env.APP_URL,
-            APP_PORT: process.env.APP_PORT ?? 3000
+            APP_URL: process.env.APP_URL,
+            APP_PORT: process.env.APP_PORT
         }
         this.SERVER_SETTINGS = this.env_configuration['APP_URL'] + ":" + this.env_configuration['APP_PORT'];
 
@@ -124,6 +125,7 @@ class ResponseType {
     dataElements;
     headers;
     type;
+    
     constructor(type, file = null, status = null, server_configuration = null, data = null, headers = null) {
         this.type = type;
         this.file = file;

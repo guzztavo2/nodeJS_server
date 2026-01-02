@@ -13,6 +13,12 @@ class Promise {
     catch(onRejected) {
         return this.callback.catch(onRejected);
     }
+
+    static checkPromise(value){
+        if(value instanceof Promise)
+            return value;
+        return new Promise((resolve) => resolve(value));
+    }
 }
 
 

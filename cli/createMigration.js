@@ -1,98 +1,64 @@
-const fs = require('fs');
-const DateTime = require('../resources/DateTime');
-const { dir } = require('console');
-const e = require('express');
-console.log('\n\nYou can define name of your migration. \n');
-console.log("\tExample: node cli/migrate.js create_table_user. \n\n");
+import Directory from "../resources/Directory.js";
+import File from "../resources/File.js";
+import DateTime from "../resources/DateTime.js";
+import Cli from "../resources/Cli.js";
 
-const stringTreatment = (string) => {
-    string = string.trim();
-    string = string.replaceAll(' ', '_');
-    return string.replaceAll(':', '_');
-}
+class CreateMigration extends Cli {
 
-const formatDate = () => {
-    const now = new Date();
+    migrationName = Cli.getArguments(2);
+    modelName = "table_name_here";
+    dateNow = CreateMigration.formatDate();
+    migrationsDirectory = new Directory("migrations");
+    path;
 
-    const YYYY = now.getFullYear();
-    const MM = String(now.getMonth() + 1).padStart(2, '0'); // Mês começa do 0
-    const DD = String(now.getDate()).padStart(2, '0');
-    const HH = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    const SS = String(now.getSeconds()).padStart(2, '0');
+    beforeHandle() {
+        console.log('\n\nYou can define name of your migration. \n');
+        console.log("\tExample: node cli/migrate.js create_table_user. \n\n");
+        this.path = this.migrationsDirectory.getAbsolutePath() + Directory.PathSep
+        this.migrationsDirectory = new Directory(this.path);
 
-    return `${YYYY}_${MM}_${DD}_${HH}_${mm}_${SS}`;
-};
+        if (!this.migrationName) {
+            this.migrationName = this.dateNow + ".js";
+            this.modelName = this.migrationName;
+        } else {
+            const path = this.getPathFromParam(this.migrationName);
+            this.migrationName = path[1];
+            this.modelName = this.migrationName;
+            this.migrationName = this.dateNow + "_" + this.migrationName + ".js";
 
-let migrationName = process.argv[2] ?? null;
-
-let modelName = "table_name_here";
-let dateNow = formatDate();
-
-dateNow = stringTreatment(dateNow).replaceAll('/', '_');
-
-let actualPath = null;
-
-if (migrationName == null)
-    migrationName = dateNow;
-else {
-    migrationName = migrationName.toString().replaceAll(" ", "_").replaceAll(/[^a-z{/}{_}]/gm, "");
-    try {
-        if (migrationName.indexOf('/') !== -1) {
-            const aux = migrationName.split('/').slice(0, migrationName.split('/').length - 1);
-            aux.forEach(async value => {
-                fs.mkdirSync('./migrations/' + value);
-            });
-            actualPath = aux + "/";
-            migrationName = migrationName.replace(aux + "/", "");
+            if (path[0]) {
+                this.path = Directory.getAbsolutePath(this.path + path[0]);
+                this.migrationsDirectory = new Directory(this.path);
+                return Directory.makeDirectories(this.path, true);
+            }
         }
-    } catch (error) {
-        console.log("Not possible create migrations file. \n\n Error: " + error);
-        return;
     }
-    modelName = stringTreatment(migrationName);
-    migrationName = dateNow + "_" + stringTreatment(migrationName);
-}
 
-const changeDirectory = () => {
-    let directory = process.argv[1];
-    directory = directory.split('/');
-    directory.pop();
-    directory = directory.join('/');
-    process.chdir(directory)
-}
-const getRealPath = () => {
-    changeDirectory();
-    const path = "../migrations/"
-    try {
-        fs.realpathSync(path);
+    handle() {
+        const migrationFile = new File(this.migrationName, this.path);
+        const migrationResourcePath = Directory.getRelativePath(Directory.getAbsolutePath("./resources/Migration.js"), this.migrationsDirectory.getAbsolutePath());
+
+        return this.migrationsDirectory.readDirectory().then(collection =>
+            collection.filter(val => val.getValue() instanceof File && val.getValue().getAbsolutePath() == migrationFile.getAbsolutePath()))
+            .then(collection => {
+                if (collection.getLength() > 0)
+                    throw Error("File aready exists: " + migrationFile.getAbsolutePath());
+            }).then(() => {
+                return migrationFile.create(`import Migration from "${migrationResourcePath}";\n\nconst randomMigration = new class extends Migration {\n    table_name = "${this.modelName}";\n\n    create() {\n        return [\n            this.id()\n        ];\n    }\n}\n\nexport default randomMigration;`)
+                    .then(res => res ?
+                        console.log(`File created sucessful: ${migrationFile.getFileName()} \n ${migrationFile.getAbsolutePath()}`) :
+                        console.error(`[ERROR] creating file: ${migrationFile.getRelativePath()}`)
+                    ).catch(err => console.error(`[ERROR] creating file: ${migrationFile.getRelativePath()} - ${err}`))
+            }).catch(err => { throw Error(`Not possible create directory: ${err}`) });
+
     }
-    catch (error) {
-        return "./migrations/";
+
+    afterHandle() { }
+
+    static formatDate() {
+        const date = DateTime.dateObject();
+        return `${date.y}_${date.mm}_${date.d}_${date.h}_${date.m}_${date.s}`;
     }
-    return path;
 }
 
-if (actualPath != null)
-    var path = getRealPath() + actualPath;
-else
-    var path = getRealPath();
-
-if (fs.existsSync(path + migrationName + ".js")) {
-    console.log("It is not possible to create a Migration with the same name as another.");
-    return;
-}
-
-try {
-    fs.appendFileSync(path + migrationName + ".js",
-        `const Migration = require("../resources/Migration");\n\nconst randomMigration = new class extends Migration {\n    table_name = "${modelName}";\n\n    create() {\n        return [\n            this.id()\n        ];\n    }\n}\n\nexport default randomMigration;`, (err) => {
-            console.log(err);
-        });
-
-    console.log((`${migrationName} file created a successful.`) + (`File Path: ${path + migrationName}.js`));
-
-} catch (error) {
-    console.log("Not possible create archive: " + migrationName + "\n\nError:\n" + error);
-} finally {
-    exit(0);
-}
+new CreateMigration();

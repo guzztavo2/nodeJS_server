@@ -10,6 +10,7 @@ class Collection {
     ready() {
         return this.initPromise;
     }
+
     getLength() {
         return this.collection.length;
     }
@@ -182,11 +183,8 @@ class TypeCollection {
     key; value;
 
     constructor(key = null, value = null) {
-        if (key != null)
-            this.key = key;
-
-        if (value != null)
-            this.value = value;
+        this.key = key;
+        this.value = value;
     }
 
 

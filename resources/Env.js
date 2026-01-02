@@ -81,7 +81,7 @@ class Env {
          'DB_PASSWORD': process.env.DB_PASSWORD ?? null,
          'DB_PORT': process.env.DB_PORT ?? null,
          'DB_NAME': process.env.DB_NAME ?? null,
-         'LANGUAGE': process.env.LANGUAGE ?? null
+         'LANGUAGE_': process.env.LANGUAGE_ ?? null
       }
       if (Utils.is_empty(this.env_configurations.APP_NAME) &&
          Utils.is_empty(this.env_configurations.APP_SECRET) &&

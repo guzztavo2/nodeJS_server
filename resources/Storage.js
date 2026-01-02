@@ -1,3 +1,4 @@
+import Directory from './Directory.js';
 import File from './File.js';
 
 class Storage {
@@ -55,7 +56,7 @@ class Disk {
     visibility
     name
     constructor(directory, url, visibility, name) {
-        this.directory = directory + "/";
+        this.directory = directory + Directory.PathSep;
         this.url = url;
         this.visibility = visibility;
         this.name = name;
@@ -70,7 +71,7 @@ class Disk {
 
     exists(path) {
         path = path.indexOf(this.directory) !== -1 ? path.substring(this.directory.length) : path;
-        return fs.existsSync(File.getDirPath(this.directory + "/" + path));
+        return fs.existsSync(File.getDirPath(this.directory + Directory.PathSep + path));
     }
 
     delete(path) {

@@ -1,6 +1,5 @@
 import fs from "fs";
 import Path from "path";
-// import Promise from "../resources/Promise.js";
 import Utils from "./Utils.js";
 import Directory from "./Directory.js";
 
@@ -9,7 +8,7 @@ class File {
     path;
     data;
 
-    constructor(fileName, path) {
+    constructor(fileName, path = null) {
         this.setFileName(fileName);
         this.setPath(path);
     }
@@ -21,6 +20,7 @@ class File {
     getFileNameNoExt() {
         return this.fileName.substring(0, this.fileName.lastIndexOf('.'))
     }
+
     setFileName(fileName) {
         Utils.validateString(fileName, 'fileName');
         this.fileName = fileName;
@@ -30,12 +30,20 @@ class File {
         return File.getAbsolutePath(this.getPath(), this.getFileName());
     }
 
+    getRelativePath(){
+        return File.getRelativePath(this.getAbsolutePath());
+    }
+
     getPath() {
         return this.path;
     }
 
-    setPath(path) {
-        Utils.validateString(path, 'path');
+    setPath(path = null) {
+        if(path)
+            Utils.validateString(path, 'path');
+        else
+            path = "./";
+
         if (path.lastIndexOf(this.getFileName()) != -1)
             this.path = Directory.getAbsolutePath(path.substring(0, path.lastIndexOf(this.getFileName())));
         else
@@ -66,11 +74,14 @@ class File {
     }
 
     create(data = null) {
-        File.createFile(this.getAbsolutePath(), data).then(data => {
-            this.data = data;
-        }).finally(() => {
-            return this.data;
-        })
+        this.data = data;
+        return File.createFile(this.getAbsolutePath(), data)
+            .then(data => {
+                return this.data
+            })
+            .catch((err) => {
+                this.data = null;
+            });
     }
 
     writeFile(data, append = true) {
@@ -117,7 +128,7 @@ class File {
         return new Promise((res, rej) => {
             fs.writeFile(path, data, { flag: 'w+' }, (err) => {
                 if (err)
-                    rej("Não foi possivel criar o arquivo: " + err);
+                    return rej("Não foi possivel criar o arquivo: " + err);
                 res(true);
             });
         })
@@ -127,7 +138,7 @@ class File {
         return new Promise((res, rej) => {
             fs.writeFile(path, data, { flag: 'a' }, (err) => {
                 if (err)
-                    rej("Não foi possivel adicionar mais ao arquivo: " + err);
+                    return rej("Não foi possivel adicionar mais ao arquivo: " + err);
                 res(true);
             });
         });
@@ -139,7 +150,11 @@ class File {
     }
 
     static getAbsolutePath(path, filename) {
-        return Path.resolve(path, filename);
+        return Directory.getAbsolutePath(path + Directory.PathSep + filename);
+    }
+
+    static getRelativePath(absolutePath, basePath = null){
+        return Directory.getRelativePath(absolutePath, basePath)
     }
 }
 

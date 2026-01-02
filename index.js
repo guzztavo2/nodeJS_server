@@ -1,7 +1,7 @@
 import App from './App.js';
 const app = new App();
 try {
-    app.startServer();
+    app.startServer().then();
 } catch (err) {
     console.error(err);
 }

@@ -1,11 +1,13 @@
-const middleware = new class {
+import Middleware from '../resources/Middleware.js';
+import Request from '../resources/Request.js';
+
+const middleware = new class extends Middleware {
     identifier = "UserValidation";
 
-    next(request, response, next) {
-        console.log("Middleware here's");
+    handle(request, next) {
+        console.log(request);
         next();
     }
-
 }
 
 export default middleware;

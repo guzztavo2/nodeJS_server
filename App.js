@@ -42,12 +42,11 @@ class App {
     }
 
     startServer() {
-        this.env_configurations.init().then(() => {
-            this.createServer();
-            this.defineRoutes();
-            this.initConfigServer();
-            this.migrationTable();
-        })
+        this.createServer();
+        return this.env_configurations.init().then(() => {
+
+            return this.defineRoutes();
+        }).then(() => { this.initConfigServer(), this.migrationTable() });
     }
 
     createServer() {
@@ -57,7 +56,7 @@ class App {
     }
 
     expressSession() {
-        this.env_configurations.init().then(_ => this.server.use(express_session({
+        return this.env_configurations.init().then(_ => this.server.use(express_session({
             secret: this.env_configurations.getEnvConfigurations().APP_SECRET,
             resave: false,
             saveUninitialized: false,
@@ -66,10 +65,9 @@ class App {
     }
 
     defineRoutes() {
-        this.expressSession();
-        var isError = false;
-        this.readFilesRoutes().then(routes => {
-            this.getRoutes(routes, (route) => {
+        return this.expressSession().then(() => {
+            var isError = false;
+            return this.readFilesRoutes().then(routes => this.getRoutes(routes, (route) => {
                 const controllerArray = typeof route.controller == 'string' && route.controller.length > 0 ? route.controller.split('::') : '';
                 this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares.toArray(),
                     this.serverReceiveDataConfiguration()), (req, res) => {
@@ -87,15 +85,17 @@ class App {
                                 else
                                     if (!Utils.is_empty(response))
                                         response.renderResponse(res);
-
                             })
                         } catch (err) {
                             isError = !isError
                             Response.error(res, 404, err)
                         }
                     });
-            });
+            }));
+
+
         });
+
 
     }
 
@@ -135,7 +135,7 @@ class App {
                         else
                             filePath = Directory.getAbsolutePath(rootPath + file.getDirectory());
 
-                        const resultFromDir = await getFilesUrl(await Directory.readDirectory(filePath), value, rootPath, filePath + "/");
+                        const resultFromDir = await getFilesUrl(await Directory.readDirectory(filePath), value, rootPath, filePath + Directory.PathSep);
                         if (resultFromDir)
                             response = response.concat(resultFromDir);
                     }
@@ -156,7 +156,7 @@ class App {
     }
 
     getRoutes(routesFromFile, callback) {
-        routesFromFile.map((val) => {
+       return routesFromFile.map((val) => {
             const key = val.getKey();
             const route_ = val.getValue();
 
@@ -166,7 +166,7 @@ class App {
                 else
                     route_['url'] = '/' + key + '/';
 
-            this.checkMiddlewares(route_).then(route => callback(route));
+            return this.checkMiddlewares(route_).then(route => callback(route));
         });
     }
 
@@ -178,63 +178,49 @@ class App {
             return Promise.resolve(route);
         }
 
-        return this.middleware_directory.readDirectory().then(middlewaresFiles =>
-            middlewaresFiles.filter(val => val.getValue() instanceof File)).then(
-                middlewaresFiles => {
-                    const tasks = middlewaresFiles.collection.map(val => {
-                        const file = val.getValue();
-                        const abs = file.getAbsolutePath();
+        return this.middleware_directory.readRecursiveDirectory().then(middlewaresFiles =>
+            middlewaresFiles.filter(val => val.getValue() instanceof File)).then(middlewaresFiles => {
 
-                        const imports = route.middlewares.map(identifier => {
+                const tasks = middlewaresFiles.collection.map(val => {
+                    const file = val.getValue();
+                    const abs = file.getAbsolutePath();
 
-                            return import(abs).then(mod => {
-                                const middleware = mod.default || mod;
+                    const imports = route.middlewares.map(identifier => {
 
-                                if (middleware.identifier === identifier)
-                                    middlewares.add(middleware.next);
+                        return import(abs).then(mod => {
+                            const middleware = mod.default || mod;
 
-                            });
+                            if (middleware.identifier === identifier)
+                                middlewares.add(middleware.next.bind(middleware));
+
                         });
+                    });
 
-                        return Promise.all(imports);
-                    });
-                    return Promise.all(tasks).then(() => {
-                        route.middlewares = middlewares;
-                        return route;
-                    });
+                    return Promise.all(imports);
                 });
+                return Promise.all(tasks).then(() => {
+                    route.middlewares = middlewares;
+                    return route;
+                });
+            });
     }
 
     readFilesRoutes() {
-        return this.route_directory.readDirectory().then(collection => {
-            return collection.filter(val => val.getValue() instanceof File);
-        }).then(collection => {
+        return this.route_directory.readDirectory().then(collection => collection.filter(val => val.getValue() instanceof File))
+            .then(collection => {
+                const tasks = collection.map(val => {
+                    const file = val.getValue();
+                    const route = file.getFileNameNoExt();
 
-            const tasks = collection.map(val => {
-                const file = val.getValue();
-                const route = file.getFileNameNoExt();
+                    if (!route) return Promise.resolve();
 
-                if (!route) return Promise.resolve();
-
-                return file.readData(true).then(data => {
-                    this.routes.add(JSON.parse(data)[0], route);
+                    return file.readData(true).then(data => {
+                        this.routes.add(JSON.parse(data)[0], route);
+                    });
                 });
+
+                return Promise.resolve(tasks).then(() => this.routes);
             });
-
-            return Promise.resolve(tasks).then(() => this.routes);
-        });
-    }
-
-    findController(controller, request) {
-        try {
-            return import(Directory.getAbsolutePath("./controllers/" + controller + ".js")).then(mod => {
-                const controller = mod.default || mod;
-                return (new controller()).setConfigFile(this.env_configurations.getEnvConfigurations(), request);
-            })
-        }
-        catch (err) {
-            throw new Error(err);
-        }
     }
 
     serverReceiveDataConfiguration() {
@@ -263,9 +249,13 @@ class App {
         this.cors_file.readData().then(data => {
             this.server.use(cors(JSON.parse(data)));
         });
-        // this.server.all('*', (req, res) => {
-        //     Response.error(res, 404, 'Page Not Found');
-        // });
+
+        this.server.use((req, res) => {
+            Response.error(res, 404, 'Page Not Found');
+        });
+
+        this.server.use((err, req, res, next) => { console.error(err.stack); res.status(500).send('Internal Server Error'); });
+
         this.server.listen(this.env_configurations.getEnvConfigurations().APP_PORT, this.env_configurations.getEnvConfigurations().APP_URL, (err) => {
             if (err)
                 throw (err);

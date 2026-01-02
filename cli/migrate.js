@@ -1,12 +1,4 @@
-import fs from 'fs';
-import MySql from '../resources/MySql.js';
-import { exit } from 'process';
-import dotenv from 'dotenv';
-import Directory from '../resources/Directory.js';
-dotenv.config()
-
-const migrationFolderPath = new Directory("migrations", './');
-
+const migrationFolderPath = new Directory("migrations", Directory.getAbsolutePath("./"));
 if (!await migrationFolderPath.isDirectory())
     throw Error("Not possible with no migrations folder");
 
@@ -34,7 +26,7 @@ async function createTable(result, mysql, migration, callback) {
         };
         callback(el);
     });
-    
+
     await mysql.createTable(migration.table_name, query);
 }
 async function alterTable(result, mysql, migration, callback) {
@@ -55,7 +47,7 @@ async function alterTable(result, mysql, migration, callback) {
 
 const useFiles = async (files, folderMigration, mysql) => {
 
-    const result = await mysql.selectAll("migrations").then(res =>{
+    const result = await mysql.selectAll("migrations").then(res => {
         console.log(res);
     }).catch(err => {
         console.error(err);

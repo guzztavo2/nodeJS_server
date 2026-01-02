@@ -1,48 +1,49 @@
-const fs = require('fs');
-const { exit } = require('process');
+import File from "../resources/File.js";
+import Directory from '../resources/Directory.js';
+import Cli from '../resources/Cli.js';
 
-if (process.argv[2] == null) {
-    console.log("\nModel's name it's necessary to create a Model.");
-    console.log("Example: node cli/User.js -- User created.\n");
-    return;
-}
-const modelName = process.argv[2].toString().replaceAll(/[^a-z{/}]/gm, "");
-const changeDirectory = () => {
-    let directory = process.argv[1];
-    directory = directory.split('/');
-    directory.pop();
-    directory = directory.join('/');
-    process.chdir(directory)
-}
-const getRealPath = () => {
-    changeDirectory();
-    const path = "../models/"
-    try {
-        fs.realpathSync(path);
+class createModel extends Cli {
+
+    modelName = Cli.getArguments(2);
+    modelDirectory = new Directory("models", "./models");
+    path = this.modelDirectory.getAbsolutePath();
+
+    beforeHandle() {
+        Cli.log("Creating Model...");
+        if (!this.modelName)
+            throw Error("Model name is required.");
+
+        this.path = this.modelDirectory.getAbsolutePath() + Directory.PathSep;
+        const path = this.getPathFromParam(this.modelName);
+        this.modelName = path[1];
+
+        if (path[0]) {
+            this.path = Directory.getAbsolutePath(this.path + path[0]);
+            this.modelDirectory = new Directory(this.path);
+            return Directory.makeDirectories(this.path, true);
+        }
+
     }
-    catch (error) {
-        return "./models/";
+
+    handle() {
+        const modelFile = new File(this.modelName + ".js", this.path);
+        const modelResourcePath = Directory.getRelativePath(Directory.getAbsolutePath("./resources/Model.js"), this.modelDirectory.getAbsolutePath());
+        
+        return this.modelDirectory.readDirectory().then(collection =>
+            collection.filter(val => val.getValue() instanceof File && val.getValue().getAbsolutePath() == modelFile.getAbsolutePath()))
+            .then(collection => {
+                if (collection.getLength() > 0)
+                    throw "File aready exists: " + modelFile.getAbsolutePath();
+            }).then(() => {
+                return modelFile.create(`import Model from "${modelResourcePath}";\n \n class ${this.modelName} extends Model {\n     table = '';\n \n     fillable = [\n         'id',\n         'name',\n         'email'\n     ]\n \n     hidden = [\n         'password'\n     ]\n \n     cast = {\n         "users": "object"\n     }\n \n }\n export default ${this.modelName};`)
+                    .then(res => res ?
+                        Cli.log((`${this.modelName} file created a successful.`) + (`\nFile Path: ${modelFile.getAbsolutePath()}`)) :
+                        Cli.logError("Failed to create model file.")
+                    ).catch(err => { throw err })
+            }).catch(err => { throw err });
     }
-    return path;
+
+    afterHandle() { }
 }
 
-
-const path = getRealPath();
-
-if (fs.existsSync(path + modelName + ".js")) {
-    console.log("\nIt is not possible to create a Model with the same name as another.\n");
-    return;
-}
-try {
-    fs.appendFileSync(path + modelName + ".js",
-        `const Model = require("../resources/Model");\n\nclass ${modelName} extends Model {\n    table = '';\n\n    fillable = [\n        'id',\n        'name',\n        'email'\n    ]\n\n    hidden = [\n        'password'\n    ]\n\n    cast = {\n        "users": "object"\n    }\n\n}\nexport default ${modelName};`, (err) => {
-            console.log(err);
-        });
-
-    console.log((`\n${modelName} file created a successful.\n`) + (`\nFile Path: ${path + modelName}.js\n`));
-
-} catch (error) {
-    console.log("\nNot possible create archive: " + modelName + "\nError:" + error + "\n");
-} finally{
-    exit(0);
-}
+new createModel();

@@ -74,38 +74,64 @@ class MySql {
     }
 
     verifyConnection() {
-        if (!this.connection._connectCalled)
-            this.connection.connect((err) => {
-                if (err)
-                    throw err;
-                else
-                    return true;
-            });
+        if (!this.connection) {
+            return Promise.reject(new Error("No connection object"));
+        }
 
+        return new Promise((resolve, reject) => {
+            // se ainda não conectou, conecta uma vez
+            if (!this.connection._connectCalled) {
+                this.connection.connect(err => {
+                    if (err) return reject(err);
+
+                    // testa a conexão
+                    this.connection.query('SELECT 1', (err) => {
+                        if (err) return reject(err);
+                        resolve(true);
+                    });
+                });
+            } else {
+                // já conectado, só testa
+                this.connection.query('SELECT 1', (err) => {
+                    if (err) {
+                        // se falhou, tenta reconectar
+                        this.connection.connect(connectErr => {
+                            if (connectErr) return reject(connectErr);
+                            resolve(true);
+                        });
+                    } else {
+                        resolve(true);
+                    }
+                });
+            }
+        });
     }
 
+
     createTable(table_name, names_types) {
-        this.verifyConnection();
+        return this.verifyConnection().then(() => {
+            let sql = "CREATE TABLE " + table_name + " (";
 
-        var sql = "CREATE TABLE " + table_name + " (";
+            let keys = Object.keys(names_types);
+            keys.forEach((val) => {
+                const isLast = keys.indexOf(val) == (keys.length - 1) ? true : false;
+                if (isLast)
+                    sql += val + " " + names_types[val];
+                else
+                    sql += val + " " + names_types[val] + ", ";
+            })
 
-        var keys = Object.keys(names_types);
-        keys.forEach((val) => {
-            const isLast = keys.indexOf(val) == (keys.length - 1) ? true : false;
-            if (isLast)
-                sql += val + " " + names_types[val];
-            else
-                sql += val + " " + names_types[val] + ", ";
-        })
+            sql += ")";
 
-        sql += ")";
-
-        return new Promise((res, error) => {
-            this.connection.query(sql, (err, result) => {
-                if (err) return error(err);
-                res(result);
+            return new Promise((res, error) => {
+                return this.connection.query(sql, (err, result) => {
+                    if (err) return error(err);
+                    return res(result);
+                });
             });
-        })
+        }).catch(err => {
+            throw err;
+        });
     }
 
     alterTable(table_name, names_types) {
@@ -153,22 +179,20 @@ class MySql {
 
     }
 
-    async selectAll(table, keys = null) {
-        this.verifyConnection();
-
-        return await new Promise((res, error) => {
-            if (keys == null)
-                return this.connection.query("SELECT * FROM " + table, (err, result, fields) => {
-                    if (err) error(err);
-                    res(result);
-                });
-            else
-                return this.connection.query("SELECT " + keys.join(",") + " FROM " + table, (err, result, fields) => {
-                    if (err) error(err);
-                    res(result);
-                });
+    selectAll(table, keys = null) {
+        // return this.verifyConnection().then(() => {
+        const query = keys == null ? `SELECT * FROM ${table};` : `SELECT ${keys.join(",")} FROM ${table};`;
+        return new Promise((resolve, reject) => {
+            this.connection.query(query, (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            });
         });
+        // }).catch(err => {
+        //     throw err;
+        // });
     }
+
 
     selectAllKeys(table, keys = null) {
         this.verifyConnection();
@@ -297,7 +321,7 @@ class MySql {
 
                 switch (key) {
                     case 'before':
-                        await this.getColumnType(table_name, props[0].column).then(async res => {
+                        this.getColumnType(table_name, props[0].column).then(async res => {
                             const values = await this.getPositions(table_name);
 
                             let result = values.filter(value => value['COLUMN_NAME'] == props[0].value);
@@ -395,7 +419,7 @@ class MySql {
     }
 
     verifyTableExist(table_name) {
-        try {
+        return this.verifyConnection().then(() => {
             let sql = `SHOW TABLES LIKE "${table_name}"`;
             return new Promise((resolve, reject) => {
                 this.connection.query(sql, (err, result) => {
@@ -405,9 +429,7 @@ class MySql {
                         resolve(result.length == 0 ? false : true);
                 });
             });
-        } catch (err) {
-            console.log(err);
-        }
+        });
     }
 
     where(table_name, where) {
@@ -436,9 +458,9 @@ class MySql {
         return this.createTable("migrations", {
             "id": "bigint unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT",
             "name": "varchar(255) NOT NULL"
-        }).then(() => true).catch(() => {
+        }).then(() => true).catch((err) => {
             throw Error(`Not possible create Migration table in database ${this.database}`);
-        })
+        });
     }
 
 }
