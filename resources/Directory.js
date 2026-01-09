@@ -35,7 +35,7 @@ class Directory {
         Utils.validateString(directory, 'directory');
         const directorySplitted = directory.split('/');
 
-        if (directorySplitted.length == 1) {
+        if (directorySplitted.filter(val => val).length == 1) {
             this.directory = directory;
             this.setPath(this.getAbsolutePath());
         } else {

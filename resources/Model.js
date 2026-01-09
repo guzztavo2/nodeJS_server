@@ -2,6 +2,7 @@ import Encrypt from './Encrypt';
 import MySql from './MySql.js';
 import File from './File.js';
 import Collection from './Collection.js';
+import Directory from './Directory.js';
 
 class Model {
     typeModel;
@@ -12,12 +13,12 @@ class Model {
     }
 
     async constructModelName(modelName) {
-        const files = await File.readFilesFromDirectory(File.getDirPath('./models'));
+        const files = await Directory.readDirectory(File.getDirPath('./models'));
         if (typeof modelName == 'function')
             modelName = modelName['name'];
         else if (typeof modelName == 'string')
             try {
-                modelName = (require(File.getDirPath('./models/' + file)))['name']
+                modelName = (require(File.getAbsolutePath('./models/' + file)))['name']
             } catch {
                 return null;
             }
@@ -26,7 +27,7 @@ class Model {
 
         let modelResult;
         for (const file of files) {
-            const model = require(File.getDirPath('./models/' + file));
+            const model = require(File.getAbsolutePath('./models/' + file));
             if (model['name'] === modelName) {
                 modelResult = new model();
                 break;
@@ -64,6 +65,7 @@ class Model {
                 };
         })).filter(val => val ?? val);
     }
+
     async getFromModelKeysBelongsToMany(tableExtended, model) {
         const keys = await this.typeModel.connection_database.selectAllKeys(tableExtended);
         const modelProps = this.getPropNames(model);
@@ -100,6 +102,7 @@ class Model {
             'function': { 'name': foreingKeysResult['name'] }
         };
     }
+
     async belongsToMany(modelName, extendedModelOrTableName, foreign_key, local_key) {
         const model = await this.constructModelName(modelName);
         let modelExtended = (await this.constructModelName(extendedModelOrTableName));
@@ -107,8 +110,7 @@ class Model {
         this.setTypeModel();
 
         const foreignKey = await this.getFromModelKeysBelongsToMany(extendedModelOrTableName, model);
-        const response =
-            await (this.typeModel.connection_database.raw(
+        const response = await (this.typeModel.connection_database.raw(
                 `SELECT * FROM ${modelExtended} WHERE ${foreign_key} = ${this[local_key]};`)
             );
         const listData_ = await (this.select().where(`${local_key} in(${(response.map(val => val[foreign_key])).join(',')})`).get())
@@ -123,10 +125,12 @@ class Model {
         this['response'][thisKeys['function']['name']] = listData__;
         return this;
     }
+
     async first() {
         this.setTypeModel();
         return this.defineActualObject((await this.typeModel.limit(1).orderBy('id ASC').get())[0]);
     }
+
     static async first() {
         return await (new this()).first();
     }
@@ -210,9 +214,11 @@ class Model {
 
         return this;
     }
+
     thisResponseToObject() {
         return this.response[this.constructor.name] == undefined ? undefined : this.response[this.constructor.name];
     }
+
     toObject() {
         const keys = this.fillable.concat(this.hidden, Object.keys(this.cast));
         let res = {};
@@ -303,6 +309,7 @@ class typeModelMySql {
     limit_var = "";
     innerJoin_var = "";
     object;
+
     setConnection() {
         this.connection_database = new MySql();
     }
@@ -378,9 +385,11 @@ class typeModelMySql {
 
         return ((await this.connection_database.raw(query))[0]);
     }
+
     async getKeys(table_name) {
         return await this.connection_database.selectAllKeys(table_name);
     }
+
     keysToSQL() {
         return this.getAllVars();
     }
@@ -393,4 +402,5 @@ class typeModelMySql {
         this.innerJoin_var = '';
     }
 }
+
 export default Model;

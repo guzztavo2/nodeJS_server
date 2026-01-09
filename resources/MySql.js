@@ -49,16 +49,13 @@ class MySql {
     }
 
     createDatabase(database_name) {
-        this.verifyConnection();
-
-        return new Promise((res, error_) => {
+        return this.verifyConnection().then(() => new Promise((res, error_) => {
             this.connection.query("")
             this.connection.query("CREATE DATABASE " + database_name, function (err, result) {
                 if (err) error_(err);
                 else res(result);
             });
-        })
-
+        }));
     }
 
     checkDatabaseExists() {
@@ -135,28 +132,23 @@ class MySql {
     }
 
     alterTable(table_name, names_types) {
-        this.verifyConnection();
-        return new Promise(async (res, error) => {
+        return this.verifyConnection().then(new Promise(async (resolve, reject) => {
             var sql = "ALTER TABLE " + table_name;
-            const existKeys = await this.selectAllKeys(table_name);
-            var keys = Object.keys(names_types);
-            keys.forEach((val) => {
-                const keyExist = existKeys.includes(val);
-
-                if (keyExist)
-                    sql += " MODIFY COLUMN " + val + " " + names_types[val] + ",";
-                else
-                    sql += " ADD " + val + " " + names_types[val] + ",";
-
-
-            })
-            sql = sql.substring(0, sql.lastIndexOf(',')) + ";";
-            this.connection.query(sql, (err, result) => {
-                if (err)
-                    error(err);
-                res(result);
+            return this.selectAllKeys(table_name).then((existKeys) => {
+                Object.keys(names_types).forEach((val) => {
+                    const keyExist = existKeys.includes(val);
+                    sql += (keyExist ? " MODIFY COLUMN " : " ADD ") + val + " " + names_types[val] + ",";
+                });
+                if (sql) {
+                    sql = sql.substring(0, sql.lastIndexOf(',')) + ";";
+                    this.connection.query(sql, (err, result) => {
+                        if (err)
+                            reject(err);
+                        resolve(result);
+                    });
+                }
             });
-        })
+        }));
     }
 
     insertValue(table, keys, values) {
@@ -166,31 +158,25 @@ class MySql {
             else
                 values[key] = "'" + value + "'"
         });
-        this.verifyConnection();
-
-        let sql = "INSERT INTO " + table + " (" + keys.join(",") + ") VALUES (" + values.join(",") + ")";
-
-        return new Promise((res, reject) => {
+        return this.verifyConnection().then(() => new Promise((res, reject) => {
+            let sql = "INSERT INTO " + table + " (" + keys.join(",") + ") VALUES (" + values.join(",") + ")";
             this.connection.query(sql, function (err, result) {
                 if (err) reject(err);
                 res(result);
             });
-        })
-
+        }));
     }
 
     selectAll(table, keys = null) {
-        // return this.verifyConnection().then(() => {
-        const query = keys == null ? `SELECT * FROM ${table};` : `SELECT ${keys.join(",")} FROM ${table};`;
-        return new Promise((resolve, reject) => {
+        return this.verifyConnection().then(() => new Promise((resolve, reject) => {
+            const query = keys == null ? `SELECT * FROM ${table};` : `SELECT ${keys.join(",")} FROM ${table};`;
             this.connection.query(query, (err, result) => {
                 if (err) reject(err);
                 else resolve(result);
             });
+        })).catch(err => {
+            throw err;
         });
-        // }).catch(err => {
-        //     throw err;
-        // });
     }
 
 
@@ -214,14 +200,13 @@ class MySql {
     }
 
     getColumnType(table, column) {
-        this.verifyConnection();
-
-        return new Promise((res, error) => {
-            this.connection.query(`SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${table}' AND COLUMN_NAME = '${column}';`, (err, result, fields) => {
-                if (err) error(err);
-                res(result[0]['COLUMN_TYPE']);
-            });
-        });
+        return new Promise((resolve, reject) =>
+            this.verifyConnection().then(() => {
+                this.connection.query(`SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${table}' AND COLUMN_NAME = '${column}';`, (err, result, fields) => {
+                    if (err) return reject(err);
+                    resolve(result[0]['COLUMN_TYPE']);
+                });
+            }));
     }
 
     getPosition(table, column) {
@@ -300,19 +285,105 @@ class MySql {
     }
 
     getPositions(table) {
-        this.verifyConnection();
-
-        return new Promise((res, error) => {
+        return this.verifyConnection().then(new Promise((res, error) => {
             this.connection.query(`SELECT COLUMN_NAME, ORDINAL_POSITION	FROM INFORMATION_SCHEMA.COLUMNS	WHERE TABLE_NAME = '${table}' AND TABLE_SCHEMA != 'mysql';`, (err, result, fields) => {
                 if (err) error(err);
                 res(result)
             });
-        });
+        }));
     }
 
-    async addConstraint(table_name, constraints) {
+    addConstraint(table_name, constraints) {
         const keys = Object.keys(constraints);
-        let sql = '';
+
+        const promises = [];
+        for (const key in constraints) {
+            const props = constraints[key];
+            if (!props || !props.length || key === "index") continue;
+
+            const columns = props.map(obj => obj.column);
+            const constraint_name = table_name + columns.join(',').replaceAll(',', '') + Math.floor(Math.random() * 100);
+
+            const tasks = props.map(prop => {
+
+                if (key === 'before') {
+                    return this.getColumnType(table_name, prop.column).then(res => {
+                        return this.getPositions(table_name).then(values => {
+                            let result = values.filter(value => value['COLUMN_NAME'] == prop.value);
+
+                            if (result[0]['ORDINAL_POSITION'] == 1)
+                                return ` MODIFY ${prop.column} ${res} FIRST`;
+
+                            else {
+                                result = values.filter(value => value['ORDINAL_POSITION'] == (result[0]['ORDINAL_POSITION'] - 1))
+                                return ` MODIFY ${prop.column} ${res} AFTER ${result[0]['COLUMN_NAME']}`
+                            }
+                        });
+                    });
+                } else if (key === 'after') {
+                    return this.getColumnType(table_name, prop.column).then(res => {
+                        return ` MODIFY ${prop.column} ${res} AFTER ${prop.value}`
+                    });
+                }
+                else if (key === 'unique') {
+                    return Promise.resolve(" ADD CONSTRAINT " + constraint_name + ` UNIQUE(${columns.join(',')}), `);
+                }
+                else if (key === 'foreignKey') {
+                    let sql;
+                    props.map((prop) => {
+                        sql += ` ADD FOREIGN KEY (${prop.column}) REFERENCES ${prop.value.from}(${prop.value.references}),`;
+                    })
+                    return Promise.resolve(sql);
+                }
+                else if (key === 'check') {
+                    let aux = '';
+                    props.map((prop) => {
+                        if (aux == '')
+                            aux += ` (${prop.column} ${prop.value} `;
+                        else
+                            aux += `AND ${prop.column} ${prop.value}`;
+                    })
+                    aux += "),";
+                    return Promise.resolve(`ADD CONSTRAINT ${constraint_name} CHECK` + aux);
+                }
+            });
+            if (tasks.length)
+                promises.push(Promise.all(tasks));
+        }
+
+
+        return Promise.all(promises).then(result => {
+            let sql = result.flat().join(" ");
+            if (sql) {
+                const aux = sql.substring(0, sql.lastIndexOf(','));
+                if (aux.length > 0)
+                    sql = aux + ';'
+                else {
+                    sql += ';';
+                }
+                this.connection.query("ALTER TABLE " + table_name + sql, (err, result) => {
+                    if (err)
+                        throw err;
+                });
+            }
+
+            sql = '';
+
+            if (constraints.index.length > 0) {
+                const columns = constraints.index.map(obj => obj.column);
+                const constraint_name = table_name + columns.join(',').replaceAll(',', '') + Math.floor(Math.random() * 100);
+
+                sql += `CREATE INDEX ${constraint_name} ON ${table_name} (${columns});`;
+            }
+
+            if (sql.length > 0) {
+                this.connection.query(sql, (err, result) => {
+                    if (err)
+                        throw err;
+                });
+            }
+        });
+
         for (const key of keys) {
             const props = constraints[key];
             if (props.length !== 0) {
@@ -321,24 +392,25 @@ class MySql {
 
                 switch (key) {
                     case 'before':
-                        this.getColumnType(table_name, props[0].column).then(async res => {
-                            const values = await this.getPositions(table_name);
+                        this.getColumnType(table_name, props[0].column).then(res => {
+                            return this.getPositions(table_name).then(values => {
 
-                            let result = values.filter(value => value['COLUMN_NAME'] == props[0].value);
+                                let result = values.filter(value => value['COLUMN_NAME'] == props[0].value);
 
-                            if (result[0]['ORDINAL_POSITION'] == 1)
-                                sql += ` MODIFY ${props[0].column} ${res} FIRST`;
+                                if (result[0]['ORDINAL_POSITION'] == 1)
+                                    sql += ` MODIFY ${props[0].column} ${res} FIRST`;
 
-                            else {
-                                result = values.filter(value => value['ORDINAL_POSITION'] == (result[0]['ORDINAL_POSITION'] - 1))
-                                sql += ` MODIFY ${props[0].column} ${res} AFTER ${result[0]['COLUMN_NAME']}`
-                            }
+                                else {
+                                    result = values.filter(value => value['ORDINAL_POSITION'] == (result[0]['ORDINAL_POSITION'] - 1))
+                                    sql += ` MODIFY ${props[0].column} ${res} AFTER ${result[0]['COLUMN_NAME']}`
+                                }
+                            });
                         })
 
                         break;
 
                     case 'after':
-                        await this.getColumnType(table_name, props[0].column).then(res => {
+                        this.getColumnType(table_name, props[0].column).then(res => {
                             sql += ` MODIFY ${props[0].column} ${res} AFTER ${props[0].value}`
                         })
                         break;

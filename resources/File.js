@@ -30,7 +30,7 @@ class File {
         return File.getAbsolutePath(this.getPath(), this.getFileName());
     }
 
-    getRelativePath(){
+    getRelativePath() {
         return File.getRelativePath(this.getAbsolutePath());
     }
 
@@ -39,7 +39,7 @@ class File {
     }
 
     setPath(path = null) {
-        if(path)
+        if (path)
             Utils.validateString(path, 'path');
         else
             path = "./";
@@ -62,6 +62,9 @@ class File {
         return Promise.resolve(this.data);
     }
 
+    importJSFile() {
+        return File.importJSFile(this.getAbsolutePath());
+    }
     getData() {
         return this.data ?? false;
     }
@@ -153,8 +156,14 @@ class File {
         return Directory.getAbsolutePath(path + Directory.PathSep + filename);
     }
 
-    static getRelativePath(absolutePath, basePath = null){
+    static getRelativePath(absolutePath, basePath = null) {
         return Directory.getRelativePath(absolutePath, basePath)
+    }
+
+    static importJSFile(filePath) {
+        return import(filePath).then(mod => {
+            return mod.default || mod;
+        });
     }
 }
 

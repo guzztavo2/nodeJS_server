@@ -144,7 +144,7 @@ class Migration {
     }
     
     updatedAt(){
-        const migration = (new Column('created_at', "TIMESTAMP", null)).default("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+        const migration = (new Column('updated_at', "TIMESTAMP", null)).default("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
         this.size = this.vars.push(migration);
         return migration;
     }

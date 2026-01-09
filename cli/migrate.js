@@ -1,171 +1,155 @@
-const migrationFolderPath = new Directory("migrations", Directory.getAbsolutePath("./"));
-if (!await migrationFolderPath.isDirectory())
-    throw Error("Not possible with no migrations folder");
+import MySql from '../resources/MySql.js';
+import Directory from '../resources/Directory.js';
+import Cli from '../resources/Cli.js';
 
-console.log("You can pass dir's name to migrate:\n\tExample: node cli/migrate.js test/example/.\n\tResult Migration: migrations/test/example\n\n");
+class Migrate extends Cli {
 
-let files = (await migrationFolderPath.readDirectory()).toArray().sort((a, b) => a.getFileName() < b.getFileName() ? -1 : 1);
+    migrationFolderPath = new Directory("migrations", './');
+    path = this.migrationFolderPath.getAbsolutePath();
+    files = [];
+    static mysql = null;
 
-const mysql = new MySql();
+    tables_created = []
+    tables_updated = []
 
-const createMigrationTableIfNotExist = async (mysql) => {
-    const res = await mysql.verifyTableExist('migrations');
-    if (!res)
-        await mysql.createMigrationTable();
-}
+    createMigrationTableIfNotExist() {
+        return Migrate.mysql.verifyTableExist('migrations').then(res_ => {
+            if (!res_)
+                return Migrate.mysql.createMigrationTable().then().catch(err => {
+                    throw err;
+                });
+        }).catch(err => {
+            throw err;
+        });
+    }
 
-async function createTable(result, mysql, migration, callback) {
-    let query = {};
+    createTable(result, migration, callback) {
+        let query = {};
 
-    result.forEach(el => {
-        const key = el.toSQL().column_name;
-        const sql = el.toSQL().sql;
-        const object = { [key]: sql };
-        query = {
-            ...query, ...object
+        result.forEach(el => {
+            const key = el.toSQL().column_name;
+            const sql = el.toSQL().sql;
+            const object = { [key]: sql };
+            query = {
+                ...query, ...object
+            };
+            callback(el);
+        });
+
+        return Migrate.mysql.createTable(migration.table_name, query);
+    }
+
+    alterTable(result, migration, callback) {
+        let query = {};
+
+        result.forEach(el => {
+            const key = el.toSQL().column_name;
+            const sql = el.toSQL().sql;
+            const object = { [key]: sql };
+            query = {
+                ...query, ...object
+            };
+            callback(el);
+
+        });
+        return Migrate.mysql.alterTable(migration.table_name, query);
+    }
+
+    createTableOrUpdate(migration) {
+
+        const constraints = {
+            unique: [],
+            foreignKey: [],
+            check: [],
+            index: [],
+            before: [],
+            after: []
         };
-        callback(el);
-    });
 
-    await mysql.createTable(migration.table_name, query);
-}
-async function alterTable(result, mysql, migration, callback) {
-    let query = {};
+        return Migrate.mysql.verifyTableExist(migration.table_name).then(res => {
+            const checkConstraints = (el) => {
+                if (el.check_var)
+                    constraints.check = constraints.check.concat({ column: el.name, value: (el.check_var) });
+                if (el.foreignKey_var)
+                    constraints.foreignKey = constraints.foreignKey.concat({ column: el.name, value: (el.foreignKey_var) });
+                if (el.unique_var)
+                    constraints.unique = constraints.unique.concat({ column: el.name, value: (el.unique_var) });
+                if (el.index_var)
+                    constraints.index = constraints.index.concat({ column: el.name, value: (el.index_var) });
+                if (el.after_var)
+                    constraints.after = constraints.after.concat({ column: el.name, value: (el.after_var) });
+                if (el.before_var)
+                    constraints.before = constraints.before.concat({ column: el.name, value: (el.before_var) });
+            }
 
-    result.forEach(el => {
-        const key = el.toSQL().column_name;
-        const sql = el.toSQL().sql;
-        const object = { [key]: sql };
-        query = {
-            ...query, ...object
-        };
-        callback(el);
+            if (res == false) {
+                this.tables_created.push(migration.table_name)
+                return this.createTable(migration.create(), migration, (el) => { checkConstraints(el) }).then(_ => Migrate.mysql.addConstraint(migration.table_name, constraints));
+            } else {
+                this.tables_updated.push(migration.table_name)
+                return this.alterTable(migration.create(), migration, (el) => { checkConstraints(el) }).then(_ => Migrate.mysql.addConstraint(migration.table_name, constraints));
+            }
+        }).catch(err => {
+            console.log(err);
+        });
+    }
 
-    });
-    await mysql.alterTable(migration.table_name, query);
-}
+    beforeHandle() {
+        Migrate.mysql = new MySql();
+        return this.migrationFolderPath.readDirectory().then(collection => {
+            this.files = collection.toArray().sort((a, b) => a.getFileName() < b.getFileName() ? -1 : 1);
 
-const useFiles = async (files, folderMigration, mysql) => {
+            return this.createMigrationTableIfNotExist().then().catch(err => Cli.exitError(err));
+        });
+    }
 
-    const result = await mysql.selectAll("migrations").then(res => {
-        console.log(res);
-    }).catch(err => {
-        console.error(err);
-    })
-
-    return new Promise(async (res, err) => {
-        try {
-            await createMigrationTableIfNotExist(mysql);
-
-            const migrated = [];
-
+    useFiles() {
+        const migrated = [];
+        return Migrate.mysql.selectAll('migrations').then(res => {
             let names = [];
-
-            const result = await mysql.selectAll("migrations");
-            console.log(result);
-            await mysql.selectAll('migrations').then(res => {
-                if (res == 0) return;
-
+            if (res.length !== 0)
                 names = res.map(val => val.name);
-            }).catch(err => { throw Error(err); });
 
-            const executeMySql = async (mySql, migration, file) => {
-                try {
-                    await Promise.all([
-                        createTableOrUpdate(mySql, migration),
-                        mySql.insertValue('migrations', ['name'], [file])
-                    ]);
-                } catch (err) {
-                    console.log(err);
-                }
-            }
-            for (let n = 0; n < files.length; n++) {
-                const originalFile = files[n];
+            const executeMySql = (migration, file) => {
+                return this.createTableOrUpdate(migration).then(() =>
+                    Migrate.mysql.insertValue('migrations', ['name'], [file.getFileName()])
+                );
+            };
 
-                if (names.length > 0 && names.includes(originalFile))
-                    continue;
-
-                const migrationFile = require(folderMigration + originalFile);
-
-                const foreignKeysReferences = ((migrationFile.create()).map(column => {
-                    if (column.foreignKey_var != false && column.foreignKey_var != undefined)
-                        return column.foreignKey_var['references'];
-                })).filter((value) => value != undefined);
-
-                for (let y = 0; y < files.length; y++) {
-                    const value = files[y];
-                    if (originalFile == value)
-                        continue;
-
-                    const migrationValue = require(folderMigration + value);
-                    if (migrated.indexOf(originalFile) !== -1)
-                        continue;
-
-                    if (foreignKeysReferences.indexOf(migrationValue.table_name) != -1) {
-                        await executeMySql(mysql, migrationValue, value);
-                        migrated.push(value);
+            return this.files.reduce((promiseChain, originalFile) => {
+                return promiseChain.then(() => {
+                    if (names.includes(originalFile.getFileName())) {
+                        return;
                     }
-                }
-                try {
-                    if (migrated.indexOf(originalFile) == -1) {
-                        await executeMySql(mysql, migrationFile, originalFile);
-                        migrated.push(originalFile);
-                    }
-                } catch (err) {
-                    continue;
-                }
-            }
-            res(migrated);
-        }
-        catch (error) {
-            err(error);
-        }
-    })
 
+                    return originalFile.importJSFile().then(module => {
+                        if (!migrated.includes(originalFile)) {
+                            return executeMySql(module, originalFile).then(() => {
+                                migrated.push(originalFile);
+                            });
+                        }
+                    });
+                });
+            }, Promise.resolve()).then(() => migrated);
+        }).catch(err => {
+            throw err;
+        });
+
+    }
+
+    handle() {
+        return this.useFiles().then((migrated) => {
+            console.log(`\n\nMigrate as successful.\nCreated tables: 
+                ${this.tables_created.join(", ")}\nUpdated tables: ${this.tables_updated.join(", ")} `);
+            if (migrated.length > 0) {
+                console.log(`\nList of files migrated:\n${migrated.map(val => val.getRelativePath()).join('\n')}\n`)
+            }
+        }).catch(err => {
+            throw err
+        });
+    }
+
+    afterHandle() { }
 }
 
-async function createTableOrUpdate(mysql, migration) {
-
-    let constraints = {
-        unique: [],
-        foreignKey: [],
-        check: [],
-        index: [],
-        before: [],
-        after: []
-    };
-    await mysql.verifyTableExist(migration.table_name).then(async res => {
-        const checkConstraints = (el) => {
-            if (el.check_var)
-                constraints.check = constraints.check.concat({ column: el.name, value: (el.check_var) });
-            if (el.foreignKey_var)
-                constraints.foreignKey = constraints.foreignKey.concat({ column: el.name, value: (el.foreignKey_var) });
-            if (el.unique_var)
-                constraints.unique = constraints.unique.concat({ column: el.name, value: (el.unique_var) });
-            if (el.index_var)
-                constraints.index = constraints.index.concat({ column: el.name, value: (el.index_var) });
-            if (el.after_var)
-                constraints.after = constraints.after.concat({ column: el.name, value: (el.after_var) });
-            if (el.before_var)
-                constraints.before = constraints.before.concat({ column: el.name, value: (el.before_var) });
-        }
-        if (res == false)
-            await createTable(migration.create(), mysql, migration, (el) => { checkConstraints(el) });
-        else
-            await alterTable(migration.create(), mysql, migration, (el) => { checkConstraints(el) });
-
-        await mysql.addConstraint(migration.table_name, constraints);
-
-    }).catch(err => {
-        console.log(err);
-    });
-}
-
-await useFiles(files, migrationFolderPath, mysql).then(res => {
-    console.log(`\n\nMigrate as successful, tables created in table database.\nCreated: ${res.length} tables`);
-    if (res.length > 0)
-        console.log(`\tList of files migrated:\n${res.join('\n')}\n`)
-
-}).catch(err => {
-    throw Error(err);
-}).finally(() => exit(0));
+new Migrate();

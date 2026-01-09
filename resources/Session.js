@@ -25,6 +25,7 @@ class Session {
         }
         return false;
     }
+    
     all() {
         return this.request.session ?? false;
     }
