@@ -29,12 +29,6 @@ class Controller {
 
         request.session.create('responses', session)
     }
-
-    static findController(controller) {
-        return import(Directory.getAbsolutePath("./controllers/" + controller + ".js")).then(mod => {
-            return mod.default || mod;
-        });
-    }
 }
 
 

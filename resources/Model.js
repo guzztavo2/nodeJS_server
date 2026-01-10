@@ -33,9 +33,7 @@ class Model {
                 break;
             }
         }
-        if (modelResult)
-            return modelResult;
-        else return null;
+        return modelResult ?? null;
     }
 
     async hasOne(modelName, foreign_key, local_key) {
@@ -111,8 +109,8 @@ class Model {
 
         const foreignKey = await this.getFromModelKeysBelongsToMany(extendedModelOrTableName, model);
         const response = await (this.typeModel.connection_database.raw(
-                `SELECT * FROM ${modelExtended} WHERE ${foreign_key} = ${this[local_key]};`)
-            );
+            `SELECT * FROM ${modelExtended} WHERE ${foreign_key} = ${this[local_key]};`)
+        );
         const listData_ = await (this.select().where(`${local_key} in(${(response.map(val => val[foreign_key])).join(',')})`).get())
         const listData__ = await (model.select().where(`${foreignKey['referenced_table']['column']} in(${(response.map(val => val[foreignKey['table']['column']])).join(',')})`)).get()
 

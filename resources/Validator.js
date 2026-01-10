@@ -133,7 +133,7 @@ class Validators {
 
             try {
                 const number = Number.parseInt(data);
-                if (number === NaN || typeof number !== 'number')
+                if (Number.isNaN(number) || !Number.isSafeInteger(number) || typeof number !== 'number')
                     return false;
                 return true;
             } catch {

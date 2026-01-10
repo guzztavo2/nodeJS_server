@@ -27,21 +27,16 @@ class Storage {
     }
 
     setDirectory(dir) {
-        try {
-            this.directory = new Directory(dir);
-        }
-        catch(e) {
-            console.log("Not possible create directory: " + dir);
-            return false;
-        }
+        this.directory = new Directory(dir);
         return true;
     }
 
-    static disk(name){
+    static disk(name) {
         return (new Storage()).disk(name);
     }
+    
     setVisibility(visibility) {
-        if (visibility == "public" || visibility == "private") 
+        if (visibility == "public" || visibility == "private")
             return true;
         else
             return false;

@@ -73,7 +73,7 @@ class App {
                     this.serverReceiveDataConfiguration()), (req, res) => {
                         try {
                             const request = new Request(req, res);
-                            (Controller.findController(controllerArray[0])).then(controller_ => {
+                            (File.importJSFile(controllerArray[0])).then(controller_ => {
                                 const controller = (new controller_()).setConfigFile(request);
                                 const response = controller[controllerArray[1]](request);
 
@@ -93,10 +93,7 @@ class App {
                     });
             }));
 
-
         });
-
-
     }
 
     async defineStorageRoutes() {
@@ -156,7 +153,7 @@ class App {
     }
 
     getRoutes(routesFromFile, callback) {
-       return routesFromFile.map((val) => {
+        return routesFromFile.map((val) => {
             const key = val.getKey();
             const route_ = val.getValue();
 
@@ -187,12 +184,11 @@ class App {
 
                     const imports = route.middlewares.map(identifier => {
 
-                        return import(abs).then(mod => {
+                        return File.importJSFile(abs).then(mod => {
                             const middleware = mod.default || mod;
 
                             if (middleware.identifier === identifier)
                                 middlewares.add(middleware.next.bind(middleware));
-
                         });
                     });
 

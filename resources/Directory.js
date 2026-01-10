@@ -80,6 +80,7 @@ class Directory {
     isDirectory() {
         return Directory.isDirectory(this.getAbsolutePath());
     }
+    
     static async isDirectory(fileDir) {
         return (new Promise((res, error) => {
             fs.stat(fileDir, (err, stats) => {
