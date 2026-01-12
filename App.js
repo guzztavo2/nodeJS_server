@@ -35,8 +35,8 @@ class App {
 
     constructor() {
         this.env_configurations = new Env();
-        this.route_directory = new Directory('routes', './routes');
-        this.middleware_directory = new Directory('middlewares', './middlewares');
+        this.route_directory = new Directory('./routes');
+        this.middleware_directory = new Directory('./middlewares');
         this.cors_file = new File('cors.json', './config');
         this.routes = new Collection();
     }
@@ -73,7 +73,8 @@ class App {
                     this.serverReceiveDataConfiguration()), (req, res) => {
                         try {
                             const request = new Request(req, res);
-                            (File.importJSFile(controllerArray[0])).then(controller_ => {
+                            const controllerFile = new File(controllerArray[0] + ".js", "./controllers");
+                            (File.importJSFile(controllerFile.getAbsolutePath())).then(controller_ => {
                                 const controller = (new controller_()).setConfigFile(request);
                                 const response = controller[controllerArray[1]](request);
 
@@ -146,7 +147,7 @@ class App {
                     this.server.get(file.file_url, [upload.fields([])], async (req, res) => {
                         res.setHeader('content-type', mime.lookup(file.file_path));
                         const _FILE = await File.readData(file.file_path);
-                        ((new Response()).data(_FILE, 200)).renderResponse(res);
+                        ((new Response(req.session, res)).data(_FILE, 200)).renderResponse(res);
                     });
                 }
         }

@@ -27,7 +27,7 @@ class File {
     }
 
     getAbsolutePath() {
-        return File.getAbsolutePath(this.getPath(), this.getFileName());
+        return File.getAbsolutePath(this.getPath().getAbsolutePath(), this.getFileName());
     }
 
     getRelativePath() {
@@ -45,10 +45,9 @@ class File {
             path = "./";
 
         if (path.lastIndexOf(this.getFileName()) != -1)
-            this.path = Directory.getAbsolutePath(path.substring(0, path.lastIndexOf(this.getFileName())));
+            this.path = new Directory(Directory.getAbsolutePath(path.substring(0, path.lastIndexOf(this.getFileName()))));
         else
-            this.path = Directory.getAbsolutePath(path);
-
+            this.path = new Directory(path);
     }
 
     readData(force = false) {

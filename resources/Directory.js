@@ -33,9 +33,13 @@ class Directory {
 
     setDirectory(directory) {
         Utils.validateString(directory, 'directory');
+
+        if(directory == "./")
+            directory = Directory.getAbsolutePath(directory)
+        
         const directorySplitted = directory.split('/');
 
-        if (directorySplitted.filter(val => val).length == 1) {
+        if (directorySplitted.filter(val => val && val.length > 1).length == 1) {
             this.directory = directory;
             this.setPath(this.getAbsolutePath());
         } else {
