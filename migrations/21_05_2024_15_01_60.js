@@ -5,7 +5,7 @@ const randomMigration = new class extends Migration {
 
     create() {
         return [
-            this.string('name').nullable(true).after('id')
+            this.string('items_2').nullable(true).after('items')
         ];
     }
 }

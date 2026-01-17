@@ -1,9 +1,9 @@
-const App = require('./App.js');
+import App from './App.js';
 const app = new App();
 try {
-    app.startServer();
+    app.startServer().then();
 } catch (err) {
-    console.log(err);
+    console.error(err);
 }
 
-module.exports = app.server;
+export default app.server;

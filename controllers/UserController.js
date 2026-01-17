@@ -1,13 +1,11 @@
-const Controller = require('../resources/Controller');
+import Controller from "../resources/Controller.js";
+import Storage from "../resources/Storage.js";
+
 class userController extends Controller {
 
-    constructor(configFile) {
-        super(configFile);
-    }
-
-    async index(request) {
-        return this.response.data('Hello user!', 200);
+    index(request) {
+        return this.response.data("Hello world!");
     }
 }
 
-module.exports = userController;
+export default userController;

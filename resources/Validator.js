@@ -1,4 +1,4 @@
-const File = require("./File");
+import File from './File.js';
 
 class Validator {
     errors = {};
@@ -133,7 +133,7 @@ class Validators {
 
             try {
                 const number = Number.parseInt(data);
-                if (number === NaN || typeof number !== 'number')
+                if (Number.isNaN(number) || !Number.isSafeInteger(number) || typeof number !== 'number')
                     return false;
                 return true;
             } catch {
@@ -228,4 +228,4 @@ class Validators {
     }
 }
 
-module.exports = Validator;
+export default Validator;

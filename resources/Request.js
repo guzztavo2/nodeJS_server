@@ -1,14 +1,15 @@
-const Session = require("./Session");
-const Validator = require("../resources/Validator");
-const Response = require("./Response");
+
+import Session from "./Session.js";
+import Validator from "../resources/Validator.js";
+import Response from "./Response.js";
+
 class Request {
     requests = [];
-
     response;
     request;
     quantity = 0;
-
     session;
+    
     constructor(request, response = null) {
         this.request = request;
 
@@ -18,9 +19,9 @@ class Request {
         this.session = new Session(request);
 
         const requests = Object.assign(
-            request.body,
-            request.params,
-            request.query
+            request.body || {},
+            request.params || {},
+            request.query || {}
         );
 
         Object.keys(requests).forEach(key => {
@@ -34,10 +35,12 @@ class Request {
     actualUrl() {
         return this.request.url.indexOf('?') != -1 ? this.request.url.substring(0, this.request.url.indexOf('?')) : this.request.url
     }
+
     insert(key, value) {
-        request = new RequestType(key, value)
+        const request = new RequestType(key, value)
         this.quantity = this.requests.push(request);
     }
+
     getLast() {
         return this.requests[this.quantity - 1];
     }
@@ -55,7 +58,7 @@ class Request {
     all() {
         return this.requests;
     }
-    
+
     session() {
         return this.session;
     }
@@ -70,7 +73,7 @@ class Request {
     }
 
     async validate(validations, messages = null) {
-    const data = this.requestsToObject()
+        const data = this.requestsToObject()
         const result = await ((new Validator).make(data, validations, messages));
         const response = new Response(this.session);
 
@@ -100,4 +103,4 @@ class RequestType {
         };
     }
 }
-module.exports = Request;
+export default Request;

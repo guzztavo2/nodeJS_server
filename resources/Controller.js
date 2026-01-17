@@ -1,11 +1,11 @@
-const Response = require('./Response.js');
+import Response from './Response.js';
+import Directory from './Directory.js';
 class Controller {
-    configFile = []
     response;
     session;
-    setConfigFile(configFile, request) {
-        this.configFile = configFile;
-        this.response = new Response(request.session);
+
+    setConfigFile(request) {
+        this.response = new Response(request.session, request.response);
         this.session = request.session;
         if (this.title !== undefined)
             this.response.dataToFront = {
@@ -32,4 +32,4 @@ class Controller {
 }
 
 
-module.exports = Controller;
+export default Controller;
