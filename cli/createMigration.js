@@ -2,6 +2,7 @@ import Directory from "../resources/Directory.js";
 import File from "../resources/File.js";
 import DateTime from "../resources/DateTime.js";
 import Cli from "../resources/Cli.js";
+import Log from "../resources/Log.js";
 
 class CreateMigration extends Cli {
 
@@ -46,8 +47,8 @@ class CreateMigration extends Cli {
             }).then(() => {
                 return migrationFile.create(`import Migration from "${migrationResourcePath}";\n\nconst randomMigration = new class extends Migration {\n    table_name = "${this.modelName}";\n\n    create() {\n        return [\n            this.id()\n        ];\n    }\n}\n\nexport default randomMigration;`)
                     .then(res => res ?
-                        console.log(`File created sucessful: ${migrationFile.getFileName()} \n ${migrationFile.getAbsolutePath()}`) :
-                        console.error(`[ERROR] creating file: ${migrationFile.getRelativePath()}`)
+                        Log.message(`File created sucessful: ${migrationFile.getFileName()} \n ${migrationFile.getAbsolutePath()}`) :
+                        Log.error(`[ERROR] creating file: ${migrationFile.getRelativePath()}`)
                     ).catch(err => console.error(`[ERROR] creating file: ${migrationFile.getRelativePath()} - ${err}`))
             }).catch(err => { throw Error(`Not possible create directory: ${err}`) });
 

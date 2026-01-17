@@ -1,3 +1,4 @@
+import Log from "./Log.js";
 
 class Session {
     request;
@@ -9,7 +10,7 @@ class Session {
         this.request.session[key] = value;
         this.request.session.save(err => {
             if (err)
-                console.log(err);
+                Log.error(err);
         });
     }
 

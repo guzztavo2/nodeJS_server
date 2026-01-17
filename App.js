@@ -18,8 +18,8 @@ import { fileURLToPath } from 'url';
 import RateLimit from "express-rate-limit";
 import helmet from 'helmet';
 import cors from 'cors';
-import Controller from './resources/Controller.js';
 import Utils from './resources/Utils.js';
+import Log from './resources/Log.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -256,7 +256,7 @@ class App {
         this.server.listen(this.env_configurations.getEnvConfigurations().APP_PORT, this.env_configurations.getEnvConfigurations().APP_URL, (err) => {
             if (err)
                 throw (err);
-            console.log("Server Started\nhttp://" + this.env_configurations.getEnvConfigurations().APP_URL + ":" + this.env_configurations.getEnvConfigurations().APP_PORT);
+            Log.message("Server Started\nhttp://" + this.env_configurations.getEnvConfigurations().APP_URL + ":" + this.env_configurations.getEnvConfigurations().APP_PORT);
         });
 
     }

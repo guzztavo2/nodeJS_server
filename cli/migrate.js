@@ -1,6 +1,7 @@
 import MySql from '../resources/MySql.js';
 import Directory from '../resources/Directory.js';
 import Cli from '../resources/Cli.js';
+import Log from '../resources/Log.js';
 
 class Migrate extends Cli {
 
@@ -90,7 +91,7 @@ class Migrate extends Cli {
                 return this.alterTable(migration.create(), migration, (el) => { checkConstraints(el) }).then(_ => Migrate.mysql.addConstraint(migration.table_name, constraints));
             }
         }).catch(err => {
-            console.log(err);
+            Log.error(err);
         });
     }
 
@@ -139,7 +140,7 @@ class Migrate extends Cli {
 
     handle() {
         return this.useFiles().then((migrated) => {
-            console.log(`\n\nMigrate as successful.\nCreated tables: 
+            Log.message(`\n\nMigrate as successful.\nCreated tables: 
                 ${this.tables_created.join(", ")}\nUpdated tables: ${this.tables_updated.join(", ")} `);
             if (migrated.length > 0) {
                 console.log(`\nList of files migrated:\n${migrated.map(val => val.getRelativePath()).join('\n')}\n`)

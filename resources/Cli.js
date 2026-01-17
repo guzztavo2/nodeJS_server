@@ -3,6 +3,7 @@ import Env from "./Env.js";
 import Utils from "./Utils.js";
 import Directory from "./Directory.js";
 import Promise from "./Promise.js";
+import Log from "./Log.js";
 
 class Cli {
     arguments = [];
@@ -53,26 +54,18 @@ class Cli {
     }
 
     static exit(message = null, code = null) {
-        !message || Cli.log(message);
+        !message || Log.message(message);
         process.exit(code);
     }
 
     static exitError(message = null, code = null) {
-        !message || Cli.logError(message);
+        !message || Log.error(message);
         process.exit(code);
-    }
-
-    static log(message) {
-        console.log(`[LOG][${DateTime.getFormattedDate(null, { dateStyle: 'short', 'timeStyle': 'medium' })}] ${message}`);
-    }
-
-    static logError(message) {
-        console.error(`[ERROR][${DateTime.getFormattedDate(null, { dateStyle: 'short', 'timeStyle': 'medium' })}] ${message}`);
     }
 
     static stringTreatment(str, trim = true, replaceArr = [{ "key": "val" }] || null) {
         if (!Utils.is_string(str))
-            return Cli.logError("The value must be a string");
+            return Log.error("The value must be a string");
         if (trim) {
             str = str.trim();
             str = str.replaceAll(' ', '_');
@@ -89,6 +82,14 @@ class Cli {
 
     static prepareEnv() {
         return (new Env()).init();
+    }
+
+    static log(message) {
+        Log.message(message);
+    }
+    
+    static error(message) {
+        Log.error(message);
     }
 }
 

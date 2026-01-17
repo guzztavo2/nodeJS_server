@@ -1,5 +1,6 @@
 import Directory from './Directory.js';
 import File from './File.js';
+import Log from './Log.js';
 
 class Storage {
 
@@ -15,7 +16,7 @@ class Storage {
                 throw Error('');
             return new Disk(this.directory, disk.url, disk.visibility, diskName);
         } catch (err) {
-            console.log("Not possible use disk: " + diskName + "\naccess: " + Directory.getAbsolutePath('./config/fileSystems.json'));
+            Log.error("Not possible use disk: " + diskName + "\naccess: " + Directory.getAbsolutePath('./config/fileSystems.json'));
             return;
         }
     }

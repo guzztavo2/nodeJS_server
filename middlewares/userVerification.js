@@ -5,7 +5,6 @@ const middleware = new class extends Middleware {
     identifier = "UserValidation";
 
     handle(request, next) {
-        console.log(request);
         next();
     }
 }

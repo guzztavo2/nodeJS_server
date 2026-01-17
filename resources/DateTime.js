@@ -1,5 +1,3 @@
-import Env from './Env.js';
-
 class DateTime {
 
     // static envConfig = new Env
