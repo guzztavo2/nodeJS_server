@@ -1,5 +1,4 @@
 import Controller from "../resources/Controller.js";
-import Storage from "../resources/Storage.js";
 
 class userController extends Controller {
 

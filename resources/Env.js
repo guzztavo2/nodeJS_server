@@ -3,6 +3,7 @@ import Directory from './Directory.js';
 import dotenv from 'dotenv';
 import Encrypt from './Encrypt.js';
 import Utils from './Utils.js';
+import { resolve } from 'path';
 
 class Env {
    static env_example = new File('.env-example', './');
@@ -11,42 +12,32 @@ class Env {
    env_configurations;
 
    init() {
-      return (Env.env_example.readData()).then(data => {
-         if (!Env.env_file.exists()) {
-            Env.env_file.create(data.toString()).then();
-         }
-
+      return Env.env_example.readData().then(data => {
          if (!Env.env_file.exists())
-            throw Error("Not possible create env_file");
+            return Env.env_file.create(data.toString()).then(_ => {
+               if (!Env.env_file.exists())
+                  throw Error("Not possible create env_file");
+            }).then(_ => resolve(data));
 
-         return Env.env_file.readData().then(res => {
-            if (Utils.is_empty(res))
-               Env.env_file.writeFile(data, false).then();
+         return resolve(data);
+      }).then(data => Env.env_file.readData().then(res => Utils.is_empty(res) ?
+         Env.env_file.writeFile(data, false) : Promise.resolve()).then(_ => {
             this.generateAppSecret();
             this.synchronizeDotEnv();
-         });
-      });
+         }));
    }
 
    generateAppSecret() {
-      try {
-         Env.env_file.readData(true).then(data => {
-            this.getKeyFromEnvFile('APP_SECRET').then(value => {
-               if (!value || value.length < 10) {
-                  data = data.replace('APP_SECRET=' + value, "APP_SECRET=" + Encrypt.generateString(40));
-                  Env.env_file.writeFile(data, false).then(res => {
-                     if (!res)
-                        throw new Error("Not possible to generate APP_SECRET in .env file");
-                  });
-               }
-            })
+      return Env.env_file.readData(true).then(data => this.getKeyFromEnvFile('APP_SECRET').then(value => {
+         if (!value || value.length < 10) {
+            data = data.replace('APP_SECRET=' + value, "APP_SECRET=" + Encrypt.generateString(40));
+            return Env.env_file.writeFile(data, false).then(res => {
+               if (!res)
+                  throw new Error("Not possible to generate APP_SECRET in .env file");
+            });
+         }
+      }));
 
-         });
-
-
-      } catch (err) {
-         throw new Error(err);
-      }
    }
 
    getKeyFromEnvFile(key_to_find) {
@@ -100,7 +91,7 @@ class Env {
       return this.env_configurations;
    }
 
-   static synchronizeDotEnv(){
+   static synchronizeDotEnv() {
       dotenv.config({ path: Env.env_file.getAbsolutePath() });
    }
 }
