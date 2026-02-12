@@ -66,6 +66,7 @@ class Collection {
             return val;
         })
     }
+    
     filter(func_) {
         const collectionFiltered = new Collection();
         return this.ready().then(() => {

@@ -1,4 +1,4 @@
-import Controller from "../resources/Controller.js";
+import Controller from "../../core/http/Controller.js";
 
 class userController extends Controller {
 

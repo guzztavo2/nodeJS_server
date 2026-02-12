@@ -1,8 +1,8 @@
-import Encrypt from './Encrypt';
+import Encrypt from '../support/Encrypt.js';
 import MySql from './MySql.js';
-import File from './File.js';
-import Collection from './Collection.js';
-import Directory from './Directory.js';
+import File from '../../resources/File.js';
+import Collection from '../support/Collection.js';
+import Directory from '../../resources/Directory.js';
 
 class Model {
     typeModel;

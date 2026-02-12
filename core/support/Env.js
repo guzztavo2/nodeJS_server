@@ -1,5 +1,5 @@
-import File from './File.js'
-import Directory from './Directory.js';
+import File from '../filesystems/File.js'
+import Directory from '../filesystems/Directory.js';
 import dotenv from 'dotenv';
 import Encrypt from './Encrypt.js';
 import Utils from './Utils.js';
@@ -17,14 +17,12 @@ class Env {
             return Env.env_file.create(data.toString()).then(_ => {
                if (!Env.env_file.exists())
                   throw Error("Not possible create env_file");
-            }).then(_ => resolve(data));
+            }).then(_ => Promise.resolve(data));
 
-         return resolve(data);
+         return Promise.resolve(data);
       }).then(data => Env.env_file.readData().then(res => Utils.is_empty(res) ?
-         Env.env_file.writeFile(data, false) : Promise.resolve()).then(_ => {
-            this.generateAppSecret();
-            this.synchronizeDotEnv();
-         }));
+         Env.env_file.writeFile(data, false) : Promise.resolve())
+         .then(_ => this.generateAppSecret()).then(_ => this.synchronizeDotEnv())).then(_ => Promise.resolve(this.env_configurations));
    }
 
    generateAppSecret() {

@@ -1,6 +1,6 @@
 
 import Session from "./Session.js";
-import Validator from "../resources/Validator.js";
+import Validator from "../support/Validator.js";
 import Response from "./Response.js";
 
 class Request {

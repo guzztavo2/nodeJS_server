@@ -48,8 +48,8 @@ class CreateMigration extends Cli {
                 return migrationFile.create(`import Migration from "${migrationResourcePath}";\n\nconst randomMigration = new class extends Migration {\n    table_name = "${this.modelName}";\n\n    create() {\n        return [\n            this.id()\n        ];\n    }\n}\n\nexport default randomMigration;`)
                     .then(res => res ?
                         Log.message(`File created sucessful: ${migrationFile.getFileName()} \n ${migrationFile.getAbsolutePath()}`) :
-                        Log.error(`[ERROR] creating file: ${migrationFile.getRelativePath()}`)
-                    ).catch(err => console.error(`[ERROR] creating file: ${migrationFile.getRelativePath()} - ${err}`))
+                        Log.error(`creating file: ${migrationFile.getRelativePath()}`)
+                    ).catch(err => Log.error(`creating file: ${migrationFile.getRelativePath()} - ${err}`))
             }).catch(err => { throw Error(`Not possible create directory: ${err}`) });
 
     }

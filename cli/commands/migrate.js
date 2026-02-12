@@ -143,7 +143,7 @@ class Migrate extends Cli {
             Log.message(`\n\nMigrate as successful.\nCreated tables: 
                 ${this.tables_created.join(", ")}\nUpdated tables: ${this.tables_updated.join(", ")} `);
             if (migrated.length > 0) {
-                console.log(`\nList of files migrated:\n${migrated.map(val => val.getRelativePath()).join('\n')}\n`)
+                Log.message(`\nList of files migrated:\n${migrated.map(val => val.getRelativePath()).join('\n')}\n`)
             }
         }).catch(err => {
             throw err

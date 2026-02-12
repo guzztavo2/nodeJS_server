@@ -1,4 +1,4 @@
-import Log from "./Log.js";
+import Log from "../support/Log.js";
 
 class Session {
     request;

@@ -1,7 +1,7 @@
 import fs from 'fs';
-import File from './File.js';
-import Directory from './Directory.js';
-import Env from './Env.js';
+import File from '../filesystems/File.js';
+import Directory from '../filesystems/Directory.js';
+import Env from '../support/Env.js';
 
 class Response {
     SERVER_SETTINGS;
@@ -11,7 +11,7 @@ class Response {
     session;
     response;
 
-    static VIEWS_DIRECTORY = new Directory("./views");
+    static VIEWS_DIRECTORY = new Directory("./resources/views");
 
     constructor(session = null, response = null) {
         Env.synchronizeDotEnv();

@@ -1,6 +1,6 @@
 import fs from "fs";
 import Path from "path";
-import Utils from "./Utils.js";
+import Utils from "../support/Utils.js";
 import Directory from "./Directory.js";
 
 class File {
@@ -19,6 +19,9 @@ class File {
 
     getFileNameNoExt() {
         return this.fileName.substring(0, this.fileName.lastIndexOf('.'))
+    }
+    getExtension() {
+        return this.fileName.substring(this.fileName.lastIndexOf('.'))
     }
 
     setFileName(fileName) {

@@ -1,5 +1,5 @@
 import Response from './Response.js';
-import Directory from './Directory.js';
+
 class Controller {
     response;
     session;

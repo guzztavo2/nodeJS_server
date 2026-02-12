@@ -1,6 +1,6 @@
 import Directory from './Directory.js';
 import File from './File.js';
-import Log from './Log.js';
+import Log from '../support/Log.js';
 
 class Storage {
 

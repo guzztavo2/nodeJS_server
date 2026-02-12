@@ -2,37 +2,40 @@ import express from 'express';
 import Request from './Request.js';
 import bodyParser from 'body-parser';
 import multer from 'multer';
-import MySql from './MySql.js';
+import MySql from '../database/MySql.js';
 import Response from './Response.js';
 import compression from "compression";
-import File from './File.js';
-import Directory from './Directory.js';
+import File from '../filesystems/File.js';
+import Directory from '../filesystems/Directory.js';
 import express_session from 'express-session';
-import Collection from './Collection.js';
-import Storage from './Storage.js';
+import Collection from '../support/Collection.js';
+import Storage from '../filesystems/Storage.js';
 import mime from 'mime-types';
 import ejs from 'ejs';
-import { dirname, join, resolve } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import RateLimit from "express-rate-limit";
 import helmet from 'helmet';
 import cors from 'cors';
-import Utils from './Utils.js';
-import Log from './Log.js';
-import Env from './Env.js';
+import Utils from '../support/Utils.js';
+import Log from '../support/Log.js';
+import Application from '../Application.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const upload = multer();
 
 class Server {
-    env_configurations = new Env();
+   
     server;
     route_directory;
     middleware_directory;
     cors_file;
     routes;
+    server_listenner;
+    connections = [];
 
-    constructor(routes_path = './routes', middlewares_path = './middlewares', cors_file_path = './config/cors.json') {
+    constructor(routes_path = './app/routes', middlewares_path = './app/middlewares', cors_file_path = './config/cors.json') {
         this.route_directory = new Directory(routes_path);
         this.middleware_directory = new Directory(middlewares_path);
         this.cors_file = new File(cors_file_path);
@@ -41,9 +44,17 @@ class Server {
 
     start() {
         this.create();
-        return this.env_configurations.init().then(() => {
-            return this.defineRoutes();
-        }).then(() => { this.initConfigServer(), this.migrationTable() });
+        return Application.env_configurations.init()
+            .then(() => this.defineRoutes())
+            .then(() => { this.initConfigServer(), this.migrationTable() });
+    }
+
+    stop() {
+        this.connections.forEach(curr => curr.destroy());
+        this.server_listenner.closeAllConnections();
+        this.server_listenner.closeIdleConnections()
+        this.server_listenner.close();
+        this.server.removeAllListeners();
     }
 
     create() {
@@ -54,26 +65,45 @@ class Server {
 
     expressSession() {
         this.server.use(express_session({
-            secret: this.env_configurations.getEnvConfigurations().APP_SECRET,
+            secret: Application.env_configurations.getEnvConfigurations().APP_SECRET,
             resave: false,
             saveUninitialized: false,
-            cookie: { secure: this.env_configurations.getEnvConfigurations().APP_ENV === 'production' }
+            cookie: { secure: Application.env_configurations.getEnvConfigurations().APP_ENV === 'production' }
         }));
     }
 
     defineRoutes() {
         this.expressSession();
         var isError = false;
-        return this.readFilesRoutes().then(routes => this.getRoutes(routes, (route) => {
+
+        const readFilesRoutes = () => {
+            return this.route_directory.readDirectory().then(collection => collection.filter(val => val.getValue() instanceof File))
+                .then(collection => {
+                    const tasks = collection.map(val => {
+                        const file = val.getValue();
+                        const route = file.getFileNameNoExt();
+
+                        if (!route) return Promise.resolve();
+
+                        return file.readData(true).then(data => {
+                            this.routes.add(JSON.parse(data)[0], route);
+                        });
+                    });
+
+                    return Promise.resolve(tasks).then(() => this.routes);
+                });
+        }
+
+        return readFilesRoutes().then(routes => this.getRoutes(routes, (route) => {
             const controllerArray = typeof route.controller == 'string' && route.controller.length > 0 ? route.controller.split('::') : '';
             this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares.toArray()), (req, res) => {
                 try {
                     const request = new Request(req, res);
-                    const controllerFile = new File(controllerArray[0] + ".js", "./controllers");
+                    const controllerFile = new File(controllerArray[0] + ".js", "./app/controllers");
                     return controllerFile.importJSFile().then(controller_ => {
                         const controller = (new controller_()).setConfigFile(request);
                         const response = controller[controllerArray[1]](request);
-                        
+
                         if (response instanceof Promise)
                             response.then(response_ => {
                                 if (!Utils.is_empty(response_))
@@ -90,8 +120,6 @@ class Server {
                 }
             });
         })).then(() => this.defineStorageRoutes());
-
-
     }
 
     async defineStorageRoutes() {
@@ -173,47 +201,31 @@ class Server {
             return Promise.resolve(route);
         }
 
-        return this.middleware_directory.readRecursiveDirectory().then(middlewaresFiles =>
-            middlewaresFiles.filter(val => val.getValue() instanceof File)).then(middlewaresFiles => {
+        return this.middleware_directory.readRecursiveDirectory()
+            .then(middlewaresFiles => middlewaresFiles.filter(val => val.getValue() instanceof File))
+            .then(middlewaresFiles => {
 
                 const tasks = middlewaresFiles.collection.map(val => {
                     const file = val.getValue();
-                    const abs = file.getAbsolutePath();
 
                     const imports = route.middlewares.map(identifier => {
-
-                        return File.importJSFile(abs).then(mod => {
+                        if (route.middlewares instanceof Collection)
+                            identifier = identifier.getKey();
+                        return file.importJSFile().then(mod => {
                             const middleware = mod.default || mod;
 
                             if (middleware.identifier === identifier)
-                                middlewares.add(middleware.next.bind(middleware));
+                                middlewares.add(middleware.next.bind(middleware), middleware.identifier);
                         });
                     });
-
-                    return Promise.all(imports);
+                    if (imports instanceof Array)
+                        return Promise.all(imports);
+                    else return imports;
                 });
                 return Promise.all(tasks).then(() => {
                     route.middlewares = middlewares;
                     return route;
                 });
-            });
-    }
-
-    readFilesRoutes() {
-        return this.route_directory.readDirectory().then(collection => collection.filter(val => val.getValue() instanceof File))
-            .then(collection => {
-                const tasks = collection.map(val => {
-                    const file = val.getValue();
-                    const route = file.getFileNameNoExt();
-
-                    if (!route) return Promise.resolve();
-
-                    return file.readData(true).then(data => {
-                        this.routes.add(JSON.parse(data)[0], route);
-                    });
-                });
-
-                return Promise.resolve(tasks).then(() => this.routes);
             });
     }
 
@@ -250,10 +262,22 @@ class Server {
 
         this.server.use((err, req, res, next) => { Log.error(err.stack); res.status(500).send('Internal Server Error'); });
 
-        this.server.listen(this.env_configurations.getEnvConfigurations().APP_PORT, this.env_configurations.getEnvConfigurations().APP_URL, (err) => {
-            if (err)
-                throw (err);
-            Log.message("Server Started\nhttp://" + this.env_configurations.getEnvConfigurations().APP_URL + ":" + this.env_configurations.getEnvConfigurations().APP_PORT);
+        this.server_listenner = this.server.listen(Application.env_configurations.getEnvConfigurations().APP_PORT,
+            Application.env_configurations.getEnvConfigurations().APP_URL, (err) => {
+                if (err)
+                    throw (err);
+
+                // setInterval(() => {
+                //     Log.message("Server is running...");
+                // }, 10000);
+                Log.message("Server Started\nhttp://" + Application.env_configurations.getEnvConfigurations().APP_URL + ":" + Application.env_configurations.getEnvConfigurations().APP_PORT);
+            });
+
+        this.server_listenner.on('connection', (connection) => {
+            this.connections.push(connection);
+            connection.on('close', () => {
+                this.connections = this.connections.filter(curr => curr !== connection);
+            });
         });
 
     }

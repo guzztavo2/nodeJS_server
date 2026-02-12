@@ -1,5 +1,5 @@
 import mysql from 'mysql';
-import Env from './Env.js'
+import Env from '../support/Env.js'
 class MySql {
     connection; host; user; password; database; port;
 
