@@ -1,9 +1,8 @@
-import File from '../filesystems/File.js'
-import Directory from '../filesystems/Directory.js';
+import File from '#core/filesystems/File.js'
+import Directory from '#core/filesystems/Directory.js';
 import dotenv from 'dotenv';
-import Encrypt from './Encrypt.js';
-import Utils from './Utils.js';
-import { resolve } from 'path';
+import Encrypt from '#core/support/Encrypt.js';
+import Utils from '#core/support/Utils.js';
 
 class Env {
    static env_example = new File('.env-example', './');

@@ -1,9 +1,8 @@
-import DateTime from "./DateTime.js";
-import Env from "./Env.js";
+import Env from "#core/support/Env.js";
 import Utils from "./Utils.js";
-import Directory from "../filesystems/Directory.js";
-import Promise from "./Promise.js";
-import Log from "./Log.js";
+import Directory from "#core/filesystems/Directory.js";
+import Promise from "#core/support/Promise.js";
+import Log from "#core/support/Log.js";
 import readline from "readline";
 
 class Cli {

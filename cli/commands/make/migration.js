@@ -1,8 +1,8 @@
-import Directory from "../resources/Directory.js";
-import File from "../resources/File.js";
-import DateTime from "../resources/DateTime.js";
-import Cli from "../resources/Cli.js";
-import Log from "../resources/Log.js";
+import Directory from "#core/filesystems/Directory.js";
+import File from "#core/filesystems/File.js";
+import DateTime from "#core/support/DateTime.js";
+import Cli from "#core/support/Cli.js";
+import Log from "#core/support/Log.js";
 
 class CreateMigration extends Cli {
 

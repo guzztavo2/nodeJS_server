@@ -1,6 +1,6 @@
-import Application from './core/Application.js';
-import Cli from './core/support/Cli.js';
-import Log from './core/support/Log.js';
+import Application from '#core/Application.js';
+import Cli from '#core/support/Cli.js';
+import Log from '#core/support/Log.js';
 
 
 const application = new Application();

@@ -1,9 +1,14 @@
 {
-  "name": "Node JS FullStack Framework",
+  "name": "node-js-fullstack-framework",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "type": "module",
+  "imports": {
+    "#core/*": "./core/*",
+    "#app/*": "./app/*",
+    "#config/*": "./config/*"
+  },
   "scripts": {
     "build": "npm install",
     "debug": "nodemon --inspect index.js",

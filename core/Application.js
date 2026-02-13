@@ -1,5 +1,5 @@
-import Server from "./http/Server.js";
-import Env from './support/Env.js';
+import Server from "#core/http/Server.js";
+import Env from '#core/support/Env.js';
 
 class Application {
     server = new Server();

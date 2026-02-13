@@ -1,4 +1,4 @@
-import DateTime from "./DateTime.js";
+import DateTime from "#core/support/DateTime.js";
 
 class Log {
     static showDateTime = true;

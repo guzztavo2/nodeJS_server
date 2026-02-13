@@ -1,4 +1,4 @@
-import Utils from "../support/Utils.js";
+import Utils from "#core/support/Utils.js";
 
 class Migration {
 

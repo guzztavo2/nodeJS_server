@@ -1,6 +1,6 @@
-import File from "../resources/File.js";
-import Directory from '../resources/Directory.js';
-import Cli from '../resources/Cli.js';
+import File from "#core/filesystems/File.js";
+import Directory from '#core/filesystems/Directory.js';
+import Cli from '#core/support/Cli.js';
 
 class createModel extends Cli {
 

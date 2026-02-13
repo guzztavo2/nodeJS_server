@@ -1,8 +1,8 @@
-import fs, { Dir } from 'fs';
-import Path, { resolve } from 'path';
-import Utils from '../support/Utils.js';
-import File from './File.js';
-import Collection from '../support/Collection.js';
+import fs from 'fs';
+import Path from 'path';
+import Utils from '#core/support/Utils.js';
+import File from '#core/filesystems/File.js';
+import Collection from '#core/support/Collection.js';
 import path from 'path';
 
 class Directory {

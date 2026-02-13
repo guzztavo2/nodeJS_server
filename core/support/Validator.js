@@ -1,4 +1,4 @@
-import File from '../filesystems/File.js';
+import File from '#core/filesystems/File.js';
 
 class Validator {
     errors = {};

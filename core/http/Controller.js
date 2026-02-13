@@ -1,4 +1,4 @@
-import Response from './Response.js';
+import Response from '#core/http/Response.js';
 
 class Controller {
     response;

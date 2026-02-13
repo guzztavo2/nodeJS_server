@@ -1,7 +1,7 @@
-import MySql from '../resources/MySql.js';
-import Directory from '../resources/Directory.js';
-import Cli from '../resources/Cli.js';
-import Log from '../resources/Log.js';
+import MySql from '#core/database/MySql.js';
+import Directory from '#core/filesystems/Directory.js';
+import Cli from '#core/support/Cli.js';
+import Log from '#core/support/Log.js';
 
 class Migrate extends Cli {
 

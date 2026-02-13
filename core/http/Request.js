@@ -1,7 +1,7 @@
 
-import Session from "./Session.js";
-import Validator from "../support/Validator.js";
-import Response from "./Response.js";
+import Session from "#core/http/Session.js";
+import Validator from "#core/support/Validator.js";
+import Response from "#core/http/Response.js";
 
 class Request {
     requests = [];

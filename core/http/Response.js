@@ -1,7 +1,7 @@
 import fs from 'fs';
-import File from '../filesystems/File.js';
-import Directory from '../filesystems/Directory.js';
-import Env from '../support/Env.js';
+import File from '#core/filesystems/File.js';
+import Directory from '#core/filesystems/Directory.js';
+import Env from '#core/support/Env.js';
 
 class Response {
     SERVER_SETTINGS;

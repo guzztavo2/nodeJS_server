@@ -1,4 +1,4 @@
-const Model = require("../resources/Model");
+import Model from "#core/database/Model.js"
 
 class User extends Model {
     table = 'user';

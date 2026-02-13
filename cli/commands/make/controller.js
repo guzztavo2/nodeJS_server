@@ -1,6 +1,6 @@
-import Directory from '../resources/Directory.js';
-import File from "../resources/File.js";
-import Cli from '../resources/Cli.js';
+import Directory from '#core/filesystems/Directory.js';
+import File from "#core/filesystems/File.js";
+import Cli from '#core/support/Cli.js';
 
 class createController extends Cli {
 

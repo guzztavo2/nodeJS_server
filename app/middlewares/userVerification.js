@@ -1,6 +1,5 @@
-import Middleware from '../../core/http/Middleware.js';
-import Request from '../../core/http/Request.js';
-import Cli from '../../core/support/Cli.js';
+import Middleware from '#core/http/Middleware.js';
+import Cli from '#core/support/Cli.js';
 const middleware = new class extends Middleware {
     identifier = "UserValidation";
 

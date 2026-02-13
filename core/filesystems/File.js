@@ -1,7 +1,7 @@
 import fs from "fs";
 import Path from "path";
-import Utils from "../support/Utils.js";
-import Directory from "./Directory.js";
+import Utils from "#core/support/Utils.js";
+import Directory from "#core/filesystems/Directory.js";
 
 class File {
     fileName;
