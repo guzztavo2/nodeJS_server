@@ -99,10 +99,10 @@ class Response {
         };
 
         if (typeof error == 'string')
-            data = Object.assign(data, { 'error_message': error });
+            data = Object.assign(data, { 'message': error });
         else if (error !== null && typeof error == 'object') {
             if (typeof error.message !== 'undefined')
-                data = Object.assign(data, { 'error_message': error.message });
+                data = Object.assign(data, error);
 
             if (typeof error.stack !== 'undefined')
                 data = Object.assign(data, { 'error_stack': error.stack });

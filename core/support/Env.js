@@ -19,9 +19,12 @@ class Env {
             }).then(_ => Promise.resolve(data));
 
          return Promise.resolve(data);
-      }).then(data => Env.env_file.readData().then(res => Utils.is_empty(res) ?
+      }).then(data => Env.env_file.readData()
+      .then(res => Utils.is_empty(res) ?
          Env.env_file.writeFile(data, false) : Promise.resolve())
-         .then(_ => this.generateAppSecret()).then(_ => this.synchronizeDotEnv())).then(_ => Promise.resolve(this.env_configurations));
+         .then(_ => this.generateAppSecret())
+         .then(_ => this.synchronizeDotEnv()))
+         .then(_ => Promise.resolve(this.env_configurations));
    }
 
    generateAppSecret() {

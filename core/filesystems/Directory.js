@@ -34,9 +34,9 @@ class Directory {
     setDirectory(directory) {
         Utils.validateString(directory, 'directory');
 
-        if(directory == "./")
+        if (directory == "./")
             directory = Directory.getAbsolutePath(directory)
-        
+
         const directorySplitted = directory.split('/');
 
         if (directorySplitted.filter(val => val && val.length > 1).length == 1) {
@@ -52,7 +52,7 @@ class Directory {
         return Directory.readDirectory(this.getAbsolutePath());
     }
 
-    readRecursiveDirectory(){
+    readRecursiveDirectory() {
         return Directory.readRecursiveDirectory(this.getAbsolutePath());
     }
 
@@ -84,7 +84,7 @@ class Directory {
     isDirectory() {
         return Directory.isDirectory(this.getAbsolutePath());
     }
-    
+
     static async isDirectory(fileDir) {
         return (new Promise((res, error) => {
             fs.stat(fileDir, (err, stats) => {
@@ -96,7 +96,10 @@ class Directory {
         })).then(res => { return res; }).catch(err => { throw err; });
     }
 
-    static getAbsolutePath(dir) {
+    static getAbsolutePath(dir = "./") {
+        const actualProcessDir = File.getActualProcessDir();
+        if ((dir[0] === "/") && actualProcessDir.split("/")[1] != dir.split("/")[1])
+            dir = actualProcessDir + dir;
         return Path.resolve(process.cwd(), dir);
     }
 
@@ -126,15 +129,14 @@ class Directory {
                     const absPath = Directory.getAbsolutePath(file);
 
                     return File.isFile(absPath).then(isFile => {
-                        if (isFile) {
-                            collection.add(new File(file_name, absPath));
-                            return;
-                        }
-                        return Directory.isDirectory(absPath).then(isDirectory => {
-                            if (isDirectory) {
-                                collection.add(new Directory(absPath));
-                            }
-                        });
+                        if (isFile)
+                            return collection.add(new File(file_name, absPath));
+                        else
+                            return Directory.isDirectory(absPath).then(isDirectory => {
+                                if (isDirectory)
+                                   return collection.add(new Directory(absPath));
+
+                            });
                     });
                 });
 

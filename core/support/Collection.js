@@ -12,31 +12,54 @@ class Collection {
     }
 
     getLength() {
-        return this.collection.length;
+        return this.ready().then(collection => {
+            return collection.collection.length;
+        })
     }
 
     synchronize() {
-        const collection = new Collection();
-        collection.collection = this.collection;
-        collection.map((value_, index_) => collection[index_] = value_.getValue());
 
-        return collection;
+        return collection.ready().then(collection => {
+            const sinchronizedCollection = new Collection();
+            sinchronizedCollection.collection = this.collection;
+            sinchronizedCollection.map((value_, index_) => collection[index_] = value_.getValue());
+            return sinchronizedCollection;
+        });
+
+    }
+
+    generateKey() {
+        return this.getLength().then(possibleKey => {
+            return possibleKey;
+        });
     }
 
     add(value, key = null) {
-        const valuedKey = this.getLength();
-        key = key == null ? valuedKey : key;
-        const dataCreated = new TypeCollection(key, value);
-        this[key] = dataCreated;
-        this.collection.push(dataCreated);
-        return this;
+        return this.ready().then(collection => {
+            const createValue = (value, key) => {
+                return new TypeCollection(key, value);
+            };
+
+            if (Utils.is_empty(key))
+                return this.generateKey().then(generatedKey => {
+                    const dataCreated = createValue(value, generatedKey);
+                    this[generatedKey] = dataCreated;
+                    collection.collection.push(dataCreated);
+                    return collection;
+                });
+
+            const dataCreated = createValue(value, key);
+            this[key] = dataCreated;
+            collection.collection.push(dataCreated);
+            return collection;
+        });
     }
 
     push(value) {
         this.add(null, value);
     }
 
-    async updateByValue(oldValue, newValue) {
+    async replaceByValue(oldValue, newValue) {
         let updated = false;
         await this.map((val, _) => {
             if (val.getValue() === oldValue) {
@@ -49,7 +72,7 @@ class Collection {
             }
 
             return val;
-        })
+        });
         return this;
     }
 
@@ -66,16 +89,16 @@ class Collection {
             return val;
         })
     }
-    
+
     filter(func_) {
         const collectionFiltered = new Collection();
         return this.ready().then(() => {
             const tasks = this.collection.map((val, key) => {
-
                 return Promise.resolve(func_(val, key)).then(res => {
                     if (res)
-                        collectionFiltered.add(val.getValue());
+                        collectionFiltered.add(val.getValue(), val.getKey());
                 });
+
             });
 
             return Promise.all(tasks).then(() => collectionFiltered);
@@ -86,7 +109,7 @@ class Collection {
         const promises = this.collection.map((item, i) => Promise.resolve(func_(item, i)));
         return Promise.all(promises).then(results => {
 
-            const collectionMapped = new Collection();
+            const mapped = new Collection();
             for (let i = 0; i < results.length; i++) {
                 const result = results[i];
 
@@ -95,12 +118,12 @@ class Collection {
                     else if (result.toLowerCase() == "break") break;
 
                 if (result instanceof TypeCollection) {
-                    collectionMapped.collection[i] = result;
-                    collectionMapped[i] = result;
+                    mapped.collection[i] = result;
+                    mapped[i] = result;
                 }
 
             }
-            return collectionMapped;
+            return mapped;
         });
 
     }
@@ -123,14 +146,26 @@ class Collection {
         return this.synchronize();
     }
 
-    findByKey(key) {
-        return this.collection.filter((value_) => {
-            return (String(value_.getKey())).indexOf(key) != -1;
-        })
+    get(key) {
+        return new Promise(resolve => this.filter((value_, index) => {
+            if(Utils.is_array(key)){
+                if(key.includes(value_.getKey()))
+                    return true;
+            }else
+                if ((String(value_.getKey())).indexOf(key) != -1)
+                    return resolve(value_.getValue());
+
+        }).then(collection => collection.getLength().then(numberOfItems => {
+            if (numberOfItems == 0)
+                resolve(false);
+            return resolve(collection);
+        })));
     }
 
     getByIndex(index) {
-        return this.collection[index];
+        return this.ready().then(collect => {
+            return collect[index];
+        });
     }
 
     findByValue(valueFind) {
@@ -138,7 +173,6 @@ class Collection {
             return this.collection.filter(valueFind);
         return this.collection.filter((value_, index_) => {
             const value = value_.getValue();
-
             if (typeof value == 'object') {
                 for (const [key_, value_] of Object.entries(value_.getValue()))
 
@@ -149,11 +183,15 @@ class Collection {
     }
 
     first() {
-        return this.collection[0];
+        return this.ready().then(collect => {
+            return collect.collection[0];
+        })
     }
 
     last() {
-        return this.collection[(this.collection.length - 1)];
+        return this.ready().then(collect => {
+            return collect.collection[collect.collection.length - 1];
+        })
     }
 
     createFromArrayObjects(array_) {
@@ -176,7 +214,9 @@ class Collection {
     }
 
     static toArray(collection) {
-        return collection.toArray();
+        if (collection instanceof Collection)
+            return collection.toArray();
+        return false;
     }
 }
 
@@ -187,7 +227,6 @@ class TypeCollection {
         this.key = key;
         this.value = value;
     }
-
 
     setKey(key) {
         this.key = key;

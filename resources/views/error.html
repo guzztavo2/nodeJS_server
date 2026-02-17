@@ -1,14 +1,14 @@
 <%- include('components/header'); %>
   <div style="text-shadow: 2px 2px 0px rgb(0, 0, 0); overflow:auto; "
     class="h-100 w-100 d-flex flex-column align-items-center justify-content-xl-center p-md-4 bg-danger ">
-    <% if(typeof error_message !=='undefined' ) { %>
+    <% if(typeof message !=='undefined' ) { %>
 
       <div class="m-0 p-0 d-flex align-items-center justify-content-center w-100">
         <h1 class="d-block fw-bolder display-1 text-light m-0 p-2">
           <%= statusCode %>
         </h1>
         <h6 class="d-block text-light m-0 mt-5 ms-2 p-2 text-break w-auto">
-          <%= error_message %>
+          <%= message %>
         </h6>
       </div>
 

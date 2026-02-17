@@ -13,7 +13,7 @@ class Storage {
         try {
             const disk = this.disks[diskName];
             if ([this.setDirectory(disk.root), this.setVisibility(disk.visibility)].includes(false))
-                throw Error('');
+                throw new Error('');
             return new Disk(this.directory, disk.url, disk.visibility, diskName);
         } catch (err) {
             Log.error("Not possible use disk: " + diskName + "\naccess: " + Directory.getAbsolutePath('./config/fileSystems.json'));

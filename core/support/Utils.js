@@ -21,9 +21,11 @@ class Utils {
     }
     
     static is_class(data, instancedOf){
-        if(Utils.is_empty(data))
-            return false;
         return data instanceof instancedOf ? true : false;
+    }
+
+    static is_array(data){
+        return this.is_class(data, Array);
     }
 }
 
