@@ -5,12 +5,14 @@ class Controller {
     session;
 
     setConfigFile(request) {
-        this.response = new Response(request.session, request.response);
         this.session = request.session;
+        this.response = new Response(this.session, request.response);
+        
         if (this.title !== undefined)
             this.response.dataToFront = {
                 'title': this.title
             }
+            
         if (this.session.getByKey('responses') !== null &&
             Object.keys(this.session.getByKey('responses')).indexOf('data') !== -1) {
             this.response.dataToFront = Object.assign(this.response.dataToFront, this.session.getByKey('responses')['data']);

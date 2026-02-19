@@ -11,8 +11,8 @@ class Route {
     routes = new Collection();
 
     constructor() {
-        this.initPromise = Config.get("routes").then(route => {
-            this.directory = new Directory(route);
+        this.initPromise = Config.get("routes").then(directory => {
+            this.directory = new Directory(directory);
         }).then(_ => this.readFilesRoutes()).then(_ => this);
     }
 
@@ -22,13 +22,12 @@ class Route {
 
     readFilesRoutes() {
         return this.routes.ready().then(() => {
-            return this.directory.readDirectory()
-                .then(collection => collection.getLength()
-                    .then(len => {
-                        if (len == 0)
-                            return false;
-                        return collection;
-                    }))
+            return this.directory.readDirectory().then(collection => collection.getLength()
+                .then(len => {
+                    if (len == 0)
+                        return false;
+                    return collection;
+                }))
                 .then(collection => collection.filter(val => val.getValue() instanceof File))
                 .then(collection => {
                     const tasks = collection.map(val => {
@@ -37,9 +36,7 @@ class Route {
 
                         if (!route) return Promise.resolve();
 
-                        return file.readData(true).then(data => {
-                            return this.routes.add(JSON.parse(data), route)
-                        });
+                        return file.readData(true).then(data => !Utils.is_empty(data) ? this.routes.add(JSON.parse(data), route) : false);
                     });
 
                     return Promise.resolve(tasks).then(() => this.routes);
@@ -55,7 +52,7 @@ class Route {
         return routesFromFile.map((val) => {
             const key = val.getKey();
             const route_s = val.getValue();
-            
+
             if (Utils.is_array(route_s)) {
                 const tasks = [];
                 for (const route_ of route_s) {
@@ -74,8 +71,6 @@ class Route {
                     else
                         route_s['url'] = '/' + key + '/';
 
-
-
             return Middleware.checkMiddlewares(route_s).then(route => callback(route));
         });
     }
@@ -83,7 +78,7 @@ class Route {
     async storageRoutes() {
         const storage = new Storage();
         const disks = await storage.setDisks();
-
+        var disksResults = [];
         for (const name in disks) {
             const value = disks[name]
 
@@ -109,7 +104,10 @@ class Route {
                         else
                             filePath = Directory.getAbsolutePath(rootPath + Directory.PathSep + file.getFileName());
 
-                        const file_url = filePath.replace(rootPath, '');
+                        var file_url = filePath.replace(rootPath, '');
+                        if (value.url !== "/")
+                            file_url = value.url + file_url;
+
                         response = response.concat({ file_url: encodeURI(file_url), file_path: filePath });
                     } else if (file instanceof Directory) {
                         if (filePath_ !== null)
@@ -125,8 +123,9 @@ class Route {
                 return response;
             };
 
-            return await getFilesUrl(files, value, rootPath);
+            disksResults = [...disksResults, ... await getFilesUrl(files, value, rootPath)];
         }
+        return disksResults;
     }
 }
 export default Route;

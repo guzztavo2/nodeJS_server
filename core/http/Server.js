@@ -78,6 +78,9 @@ class Server {
                 var [controllerName, controllerMethod] = null;
             else
                 var [controllerName, controllerMethod] = route.controller.split("::")
+            const renderError = (response, http_code = 404, err = null) => {
+                Response.error(response, http_code, err)
+            };
 
             this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares.toArray()), (req, res) => {
                 try {
@@ -100,11 +103,12 @@ class Server {
                             else
                                 if (!Utils.is_empty(response))
                                     response.renderResponse(res);
+                        }).catch(err => {
+                            return renderError(res, 500, err);
                         });
                     });
                 } catch (e) {
-                    isError = !isError
-                    Response.error(res, 404, err)
+
                 }
             });
         }).then(() => this.route.storageRoutes()).then(files => {

@@ -57,7 +57,7 @@ class Disk {
         this.visibility = visibility;
         this.name = name;
     }
-    async listFilesFromDirectory(path = null) {
+    async listFiles(path = null) {
         let dir = path == null ? this.directory : this.directory.setPath(this.directory.getAbsolutePath() + path);
         if (!(await dir.isDirectory()))
             return [];

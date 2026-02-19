@@ -1,7 +1,7 @@
 import fs from 'fs';
 import File from '#core/filesystems/File.js';
 import Directory from '#core/filesystems/Directory.js';
-import Env from '#core/support/Env.js';
+import Utils from '#core/support/Utils.js';
 
 class Response {
     SERVER_SETTINGS;
@@ -9,33 +9,46 @@ class Response {
     HEADERS = [];
     dataToFront = {};
     session;
-    response;
+    static response;
 
-    static VIEWS_DIRECTORY = new Directory("./resources/views");
+    static VIEWS_DIRECTORY = new Directory("/resources/views");
 
     constructor(session = null, response = null) {
-        Env.synchronizeDotEnv();
         this.env_configuration = {
             APP_URL: process.env.APP_URL,
             APP_PORT: process.env.APP_PORT
         }
         this.SERVER_SETTINGS = this.env_configuration['APP_URL'] + ":" + this.env_configuration['APP_PORT'];
 
-        this.response = response || false;
+        this.setResponse(response || false);
 
-        if (session !== null)
+        if (!Utils.is_empty(session))
             this.session = session;
+        return this;
+    }
+    
+    setResponse(res = false) {
+        Response.response = !res && Response.response ? Response.response : res;
+    }
+
+    responseTypeFactory(type, status, file = null, server_configuration = null, data = null, headers = null) {
+        server_configuration = Utils.is_empty(server_configuration) ? { HOME_URL: this.SERVER_SETTINGS } : Object.assign({ HOME_URL: this.SERVER_SETTINGS }, server_configuration);
+        data = Object.assign(this.dataToFront, data || {});
+        headers = Utils.is_empty(headers) ? this.HEADERS : Object.assign(this.HEADERS, headers);
+        return Response.responseTypeFactory(type, status, file, server_configuration, data, headers)
+    }
+
+    static responseTypeFactory(type, status, file = null, server_configuration = null, data = null, headers = null) {
+        file = Utils.is_empty(file) ? null : file.getAbsolutePath();
+        return new ResponseType(type, file, status, server_configuration, data, headers);
     }
 
     view(file_dir, status = 200, data) {
         const fileView = this.checkFile(file_dir);
-        if(!fileView)
-            return Response.error(this.response, 501, "Not possible execute command");
+        if (!fileView)
+            return Response.error(this.response, 501, "Not possible find the view: " + file_dir);
 
-        return new ResponseType('view', fileView ? fileView.getAbsolutePath() : null, status,
-            { HOME_URL: this.SERVER_SETTINGS },
-            Object.assign(this.dataToFront, data), this.HEADERS
-        );
+        return this.responseTypeFactory("view", status, fileView, null, data);
     };
 
     back(data = undefined) {
@@ -54,15 +67,15 @@ class Response {
         if (data !== undefined)
             this.session.create('responses', { 'data': data })
 
-        return new ResponseType('redirect', url);
+        return this.responseTypeFactory("redirect", null, url, null);
     }
-    
+
     json(data, status = 200) {
-        return new ResponseType('json', null, status, null, data, this.HEADERS)
+        return this.responseTypeFactory("json", status, null, null, data);
     }
 
     data(data, status = 200) {
-        return new ResponseType('data', null, status, null, data, this.HEADERS);
+        return this.responseTypeFactory("data", status, null, null, data);
     }
 
     checkFile(file) {
@@ -79,7 +92,7 @@ class Response {
 
     downloadFile(path_file, status = 200) {
         if (fs.existsSync(path_file)) {
-            return new ResponseType('download', null, status, null, Object.assign(this.dataToFront, data), this.HEADERS);
+            return this.responseTypeFactory("download", status, null, null, data);
         }
     }
 
@@ -93,36 +106,44 @@ class Response {
                 this.HEADERS.splice(this.HEADERS.indexOf(header), 1);
     }
 
-    static error(res, status = 404, error = null) {
+    error(status = 404, error = null) {
+        return Response.error(status, error);
+    }
+
+    static error(status = 404, error = null) {
         let data = {
             'title': 'Page of Error'
         };
 
+        const checkIsEmpty = (key, data, error) => {
+            if (!Utils.is_empty(error[key]))
+                data[key] = error[key];
+            return data;
+        }
+
         if (typeof error == 'string')
             data = Object.assign(data, { 'message': error });
         else if (error !== null && typeof error == 'object') {
-            if (typeof error.message !== 'undefined')
-                data = Object.assign(data, error);
-
-            if (typeof error.stack !== 'undefined')
-                data = Object.assign(data, { 'error_stack': error.stack });
+            data = checkIsEmpty("message", data, error);
+            data = checkIsEmpty("error_stack", data, error);
+            data = checkIsEmpty("title", data, error);
         }
 
         const responseObj = new Response();
 
         const object = {
             'object': (data, status) => {
-                responseObj.view('error', status ?? 404, data).renderResponse(res);
+                responseObj.view('error', status ?? 404, data).renderResponse(Response.response);
                 return true;
             },
             'string': (data, status) => {
-                responseObj.view('error', status ?? 404, data).renderResponse(res);
+                responseObj.view('error', status ?? 404, data).renderResponse(Response.response);
                 return true;
             }
         }
 
-        if (error == null || Object.keys(object).indexOf(typeof error) == -1 || object[typeof error](data, status) !== true)
-            responseObj.view('error', 404, data).renderResponse(res);
+        if (Object.keys(object).indexOf(typeof error) == -1 || object[typeof error](data, status) !== true)
+            responseObj.view('error', status, data).renderResponse(Response.response);
     }
 }
 
@@ -133,6 +154,8 @@ class ResponseType {
     dataElements;
     headers;
     type;
+
+    static TYPES = ['view', 'json', 'data', 'download', 'redirect'];
 
     constructor(type, file = null, status = null, server_configuration = null, data = null, headers = null) {
         this.type = type;
