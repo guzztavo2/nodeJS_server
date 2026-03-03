@@ -13,8 +13,8 @@ class CreateMigration extends Cli {
     path;
 
     beforeHandle() {
-        console.log('\n\nYou can define name of your migration. \n');
-        console.log("\tExample: node cli/migrate.js create_table_user. \n\n");
+        Log.log('\n\nYou can define name of your migration. \n');
+        Log.log("\tExample: node cli/migrate.js create_table_user. \n\n");
         this.path = this.migrationsDirectory.getAbsolutePath() + Directory.PathSep
         this.migrationsDirectory = new Directory(this.path);
 

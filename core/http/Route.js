@@ -28,15 +28,17 @@ class Route {
                         return false;
                     return collection;
                 }))
-                .then(collection => collection.filter(val => val.getValue() instanceof File))
+                .then(collection => collection.filter(val => val instanceof File))
                 .then(collection => {
                     const tasks = collection.map(val => {
-                        const file = val.getValue();
+                        const file = val;
                         const route = file.getFileNameNoExt();
 
-                        if (!route) return Promise.resolve();
-
-                        return file.readData(true).then(data => !Utils.is_empty(data) ? this.routes.add(JSON.parse(data), route) : false);
+                        return file.readData(true).then(data => {
+                            if (!Utils.is_empty(data))
+                                this.routes.add(JSON.parse(data), route);
+                            return val;
+                        });
                     });
 
                     return Promise.resolve(tasks).then(() => this.routes);
@@ -49,9 +51,8 @@ class Route {
     }
 
     getRoutes(routesFromFile, callback) {
-        return routesFromFile.map((val) => {
-            const key = val.getKey();
-            const route_s = val.getValue();
+        return routesFromFile.map((val, key) => {
+            const route_s = val;
 
             if (Utils.is_array(route_s)) {
                 const tasks = [];
@@ -96,7 +97,7 @@ class Route {
                     return false;
                 await files.map(async (val) => {
                     let filePath;
-                    const file = val.getValue();
+                    const file = val;
 
                     if (file instanceof File) {
                         if (filePath_ !== null)

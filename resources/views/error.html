@@ -12,13 +12,18 @@
         </h6>
       </div>
 
-      <% if(typeof error_stack !=='undefined' ){ %>
+      <% }if(typeof error_stack !=='undefined' ){ %>
         <div class="w-auto mt-4 p-0 d-flex justify-content-center" style=" max-height: 50%; overflow: auto;">
           <h6 style="overflow: auto;" class="border border-light d-block text-light m-0 p-0 col-xl-12 p-4 text-break text-wrap h-100">
             <%= error_stack %>
           </h6>
         </div>
-        <%}%>
+      <% } else if(typeof stack !=='undefined' ){ %>
+        <div class="w-auto mt-4 p-0 d-flex justify-content-center" style=" max-height: 50%; overflow: auto;">
+          <h6 style="overflow: auto;" class="border border-light d-block text-light m-0 p-0 col-xl-12 p-4 text-break text-wrap h-100">
+            <%= stack %>
+          </h6>
+        </div>
           <%} else {%>
             <div class="m-0 p-0 d-flex align-items-center justify-content-center w-100">
               <h1 class="fw-bolder display-1 text-light m-0 p-0">

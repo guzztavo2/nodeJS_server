@@ -67,9 +67,11 @@ class File {
     importJSFile() {
         return File.importJSFile(this.getAbsolutePath());
     }
+
     getData() {
         return this.data ?? false;
     }
+    
     exists() {
         return File.fileExists(this.getAbsolutePath());
     }

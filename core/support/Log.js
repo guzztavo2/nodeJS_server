@@ -1,6 +1,8 @@
 import DateTime from "#core/support/DateTime.js";
+import File from "#core/filesystems/File.js";
 
 class Log {
+    static fileLog = new File("main.logs", "/storage/logs");
     static showDateTime = true;
     static textColor = "";
     static backgroundColor = "";
@@ -25,27 +27,39 @@ class Log {
     static log(message) {
         if (this.showDateTime) {
             const dateTime = `[${DateTime.getFormattedDate(null, { dateStyle: 'short', 'timeStyle': 'medium' })}]`;
-            console.log(`[LOG] ${dateTime} ${message}`);
+            message = (`[LOG] ${dateTime} ${message}`);
         } else
-            console.log(`[LOG] ${message}`);
+            message = (`[LOG] ${message}`);
+        
+        console.log(message);
+        this.writeInFile(message, true);
     }
 
     static info(message) {
         if (this.showDateTime) {
             const dateTime = `[${DateTime.getFormattedDate(null, { dateStyle: 'short', 'timeStyle': 'medium' })}]`;
-            console.log(`[INFO] ${dateTime} ${message}`);
+            message = (`[INFO] ${dateTime} ${message}`);
         } else
-            console.log(`[INFO] ${message}`);
+            message = (`[INFO] ${message}`);
+        console.log(message);
+        this.writeInFile(message, true);
     }
 
     static error(message) {
+        message = message instanceof Error ? (message.toString() + "\nStack:" + message.stack) : message;
         if (this.showDateTime) {
             const dateTime = `[${DateTime.getFormattedDate(null, { dateStyle: 'short', 'timeStyle': 'medium' })}]`;
-            console.error(`[ERROR] ${dateTime} ${message}`);
+            message = (`[ERROR] ${dateTime} ${message}`);
         } else
-            console.error(`[ERROR] ${message}`);
+            message = (`[ERROR] ${message}`);
+        console.error(message);
+        this.writeInFile(message, true);
     }
 
+    static writeInFile(log){
+        log = "\n" + log;
+        return this.fileLog.writeFile(log, true);
+    }
 }
 
 export default Log;

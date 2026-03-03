@@ -25,20 +25,21 @@ class Middleware {
             }
 
             return this.middleware_directory.readRecursiveDirectory()
-                .then(middlewaresFiles => middlewaresFiles.filter(val => val.getValue() instanceof File))
+                .then(middlewaresFiles => middlewaresFiles.filter(val => val instanceof File))
                 .then(middlewaresFiles => {
-                    const tasks = middlewaresFiles.collection.map(val => {
-                        const file = val.getValue();
+                    const tasks = [];
+                    middlewaresFiles.map(val => {
+                        const file = val;
 
                         const imports = route.middlewares.map(identifier => {
                             if (route.middlewares instanceof Collection)
                                 identifier = identifier.getKey();
-                            return file.importJSFile().then(mod => {
+                            tasks.push(file.importJSFile().then(mod => {
                                 const middleware = mod.default || mod;
 
                                 if (middleware.identifier === identifier)
                                     middlewares.add(middleware.next.bind(middleware), middleware.identifier);
-                            });
+                            }));
                         });
                         if (imports instanceof Array)
                             return Promise.all(imports);

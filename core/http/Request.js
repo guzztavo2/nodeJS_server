@@ -2,61 +2,59 @@
 import Session from "#core/http/Session.js";
 import Validator from "#core/support/Validator.js";
 import Response from "#core/http/Response.js";
+import Collection from "#core/support/Collection.js";
 
 class Request {
-    requests = [];
     response;
-    request;
-    quantity = 0;
-    session;
-    
-    constructor(request, response = null) {
-        this.request = request;
+    static session;
+    static httpRequest;
+    initPromise;
 
-        if (response !== null)
-            this.response = response;
+    constructor(httpRequest = null) {
+        if (httpRequest) {
+            Request.httpRequest = httpRequest;
+            Response.httpResponse = httpRequest.res;
+        }
 
-        this.session = new Session(request);
+        this.session = new Session(httpRequest);
 
-        const requests = Object.assign(
-            request.body || {},
-            request.params || {},
-            request.query || {}
-        );
+        this.requests = new Collection(Object.assign(
+            httpRequest.body || {},
+            httpRequest.params || {},
+            httpRequest.query || {}
+        ));        
+    }
 
-        Object.keys(requests).forEach(key => {
-            const value = requests[key];
-            this.requests.push(new RequestType(key, value))
-        });
+    httpRequest(){
+        return Request.httpRequest;
+    }
 
-        this.quantity = this.requests.length;
+    httpResponse(){
+        return Response.httpResponse;
     }
 
     actualUrl() {
-        return this.request.url.indexOf('?') != -1 ? this.request.url.substring(0, this.request.url.indexOf('?')) : this.request.url
+        return Request.httpRequest.url.indexOf('?') != -1 ? Request.httpRequest.url.substring(0, Request.httpRequest.url.indexOf('?')) : Request.httpRequest.url
     }
 
     insert(key, value) {
-        const request = new RequestType(key, value)
-        this.quantity = this.requests.push(request);
+        this.requests.add(value, key);
     }
 
     getLast() {
-        return this.requests[this.quantity - 1];
+        return this.requests.last();
     }
 
     getFirst() {
-        return this.requests[0];
+        return this.requests.first();
     }
 
     getByKey(findByKey) {
-        return this.requests.find((requestType) => {
-            if (requestType.key === findByKey)
-                return requestType;
-        })
+        return this.requests.get(findByKey);
     }
+
     all() {
-        return this.requests;
+        return this.requests.toArray();
     }
 
     session() {
@@ -65,8 +63,8 @@ class Request {
 
     requestsToObject() {
         const result = {};
-        this.requests.forEach(request => {
-            const arrayOf = Object.values(request);
+        this.requests.forEach(httpRequest => {
+            const arrayOf = Object.values(httpRequest);
             result[arrayOf[0]] = arrayOf[1];
         })
         return result;
@@ -85,22 +83,6 @@ class Request {
                 response.json({ 'errors': result.errors }, 200).renderResponse(this.response);
 
         return result;
-    }
-}
-
-class RequestType {
-    key;
-    value;
-
-    constructor(key, value) {
-        this.key = key;
-        this.value = value;
-    }
-
-    toObject() {
-        return {
-            [this.key]: this.value
-        };
     }
 }
 export default Request;

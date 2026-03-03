@@ -37,9 +37,9 @@ class Server {
     }
 
     start() {
-        this.create();
         [
             () => Application.env_configurations.init(),
+            () => this.create(),
             () => this.startRoutes(),
             () => this.initConfigServer(),
             () => this.migrationTable()
@@ -59,7 +59,18 @@ class Server {
     create() {
         if (Utils.is_empty(this.server))
             this.server = express();
-        return this.server;
+
+        this.serverReceiveDataConfiguration().forEach(el => this.server.use(el));
+        this.server.engine('html', ejs.renderFile);
+        this.server.use(compression());
+        this.server.set('view engine', 'html');
+        this.server.use('/public', express.static(Directory.getAbsolutePath('./public')));
+        this.server.set('views', Directory.getAbsolutePath('./views'));
+        this.securityPass();
+        this.requestLimiter();
+        return this.cors_file.readData().then(data => {
+            this.server.use(cors(JSON.parse(data)));
+        });
     }
 
     expressSession() {
@@ -78,39 +89,46 @@ class Server {
                 var [controllerName, controllerMethod] = null;
             else
                 var [controllerName, controllerMethod] = route.controller.split("::")
-            const renderError = (response, http_code = 404, err = null) => {
-                Response.error(response, http_code, err)
+            const renderError = (http_code = 404, err = null) => {
+                Response.error(http_code, err)
             };
-
-            this.server[route.method](route.url, [upload.fields([])].concat(route.middlewares.toArray()), (req, res) => {
-                try {
-                    const request = new Request(req, res);
+            return route.middlewares.valuesToArray().then(middlewaresArray => {
+                this.server[route.method](route.url, [upload.fields([])].concat(middlewaresArray), (req, res) => {
+                    const request = new Request(req);
                     return Config.get("controllers").then(controllerPath => {
                         const controllerFile = new File(controllerName + ".js", controllerPath);
                         return controllerFile.importJSFile().then(controller_ => {
+
                             const controller = (new controller_()).setConfigFile(request);
 
                             if (Utils.is_empty(controller[controllerMethod]))
-                                return Response.error(res, 401, { "message": "Page not found", "title": "Erro!" });
+                                return Response.error(401, { "message": "Page not found", "title": "Erro!" });
 
                             const response = controller[controllerMethod](request);
 
                             if (response instanceof Promise)
                                 response.then(response_ => {
-                                    if (!Utils.is_empty(response_))
+                                    if (!Utils.is_empty(response_) && !Utils.is_empty(response_.renderResponse))
                                         response_.renderResponse(res);
-                                }).catch(err => { throw err });
+                                    else
+                                        throw new Error("Response not defined");
+                                }).catch(err => {
+                                    throw err
+                                });
                             else
-                                if (!Utils.is_empty(response))
+                                if (!Utils.is_empty(response) && !Utils.is_empty(response.renderResponse))
                                     response.renderResponse(res);
+                                else
+                                    // throw new Error("Response not defined");
+                                    Response.data(response).renderResponse();
                         }).catch(err => {
-                            return renderError(res, 500, err);
+                            Log.error(err);
+                            return renderError(500, err);
                         });
                     });
-                } catch (e) {
+                });
+            })
 
-                }
-            });
         }).then(() => this.route.storageRoutes()).then(files => {
             if (files && Utils.is_array(files))
                 for (const file of files) {
@@ -125,29 +143,13 @@ class Server {
 
     serverReceiveDataConfiguration() {
         return [
-            bodyParser.json(),
-            upload.array(),
-            bodyParser.urlencoded({
-                extended: false
-            })
+            express.json(),
+            express.urlencoded({ extended: true }),
+            upload.array()
         ];
     }
 
     initConfigServer() {
-
-        this.serverReceiveDataConfiguration().forEach(el => this.server.use(el));
-        this.server.engine('html', ejs.renderFile);
-        this.server.use(compression());
-        this.server.set('view engine', 'html');
-        this.server.use('/public', express.static(Directory.getAbsolutePath('./public')));
-        this.server.use(express.json());
-        this.server.set('views', Directory.getAbsolutePath('./views'));
-        this.securityPass();
-        this.requestLimiter();
-        this.cors_file.readData().then(data => {
-            this.server.use(cors(JSON.parse(data)));
-        });
-
         this.server.use((req, res) => {
             Response.error(res, 404, 'Page Not Found');
         });
@@ -159,10 +161,7 @@ class Server {
                 if (err)
                     throw (err);
 
-                // setInterval(() => {
-                //     Log.message("Server is running...");
-                // }, 10000);
-                Log.message("Server Started\nhttp://" + Application.env_configurations.getEnvConfigurations().APP_URL + ":" + Application.env_configurations.getEnvConfigurations().APP_PORT);
+                Log.log("Server Started | http://" + Application.env_configurations.getEnvConfigurations().APP_URL + ":" + Application.env_configurations.getEnvConfigurations().APP_PORT);
             });
 
         this.server_listenner.on('connection', (connection) => {
@@ -172,7 +171,7 @@ class Server {
             });
         });
 
-        return Promise.resolve(true);
+        return Promise.resolve(this);
     }
 
     securityPass() {

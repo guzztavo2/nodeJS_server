@@ -4,41 +4,47 @@ import Directory from '#core/filesystems/Directory.js';
 import Utils from '#core/support/Utils.js';
 
 class Response {
-    SERVER_SETTINGS;
+    static SERVER_SETTINGS;
     env_configuration;
     HEADERS = [];
     dataToFront = {};
     session;
-    static response;
-
+    static httpResponse;
     static VIEWS_DIRECTORY = new Directory("/resources/views");
 
-    constructor(session = null, response = null) {
+    constructor(session = null, httpResponse = null) {
         this.env_configuration = {
             APP_URL: process.env.APP_URL,
             APP_PORT: process.env.APP_PORT
         }
-        this.SERVER_SETTINGS = this.env_configuration['APP_URL'] + ":" + this.env_configuration['APP_PORT'];
+        Response.SERVER_SETTINGS = this.env_configuration['APP_URL'] + ":" + this.env_configuration['APP_PORT'];
 
-        this.setResponse(response || false);
+        Response.setResponse(httpResponse || false);
 
         if (!Utils.is_empty(session))
             this.session = session;
         return this;
     }
     
-    setResponse(res = false) {
-        Response.response = !res && Response.response ? Response.response : res;
+    static setResponse(httpResponse = false) {
+        Response.httpResponse = !httpResponse && Response.httpResponse ? Response.httpResponse : httpResponse;
     }
 
+    static serverConfigurations(){
+        return { HOME_URL: Response.SERVER_SETTINGS };
+    }
     responseTypeFactory(type, status, file = null, server_configuration = null, data = null, headers = null) {
-        server_configuration = Utils.is_empty(server_configuration) ? { HOME_URL: this.SERVER_SETTINGS } : Object.assign({ HOME_URL: this.SERVER_SETTINGS }, server_configuration);
-        data = Object.assign(this.dataToFront, data || {});
+        server_configuration = Object.assign({ HOME_URL: Response.serverConfigurations() }, server_configuration);
+        
+        data = !Utils.is_empty(this.dataToFront) && Utils.is_array(data) ? Object.assign(this.dataToFront, data || {}) : 
+        Utils.is_empty(this.dataToFront) && !Utils.is_array(data) ? Object.assign(this.dataToFront, {data} || {}) : data;
+        
         headers = Utils.is_empty(headers) ? this.HEADERS : Object.assign(this.HEADERS, headers);
         return Response.responseTypeFactory(type, status, file, server_configuration, data, headers)
     }
 
     static responseTypeFactory(type, status, file = null, server_configuration = null, data = null, headers = null) {
+        server_configuration = Object.assign({ HOME_URL: Response.serverConfigurations() }, server_configuration);
         file = Utils.is_empty(file) ? null : file.getAbsolutePath();
         return new ResponseType(type, file, status, server_configuration, data, headers);
     }
@@ -46,7 +52,7 @@ class Response {
     view(file_dir, status = 200, data) {
         const fileView = this.checkFile(file_dir);
         if (!fileView)
-            return Response.error(this.response, 501, "Not possible find the view: " + file_dir);
+            return Response.error(501, "Not possible find the view: " + file_dir);
 
         return this.responseTypeFactory("view", status, fileView, null, data);
     };
@@ -110,6 +116,10 @@ class Response {
         return Response.error(status, error);
     }
 
+    static data(data, status = 200, headers = null){
+        return Response.responseTypeFactory("data", status, null, null, data, headers);
+    }
+
     static error(status = 404, error = null) {
         let data = {
             'title': 'Page of Error'
@@ -125,7 +135,7 @@ class Response {
             data = Object.assign(data, { 'message': error });
         else if (error !== null && typeof error == 'object') {
             data = checkIsEmpty("message", data, error);
-            data = checkIsEmpty("error_stack", data, error);
+            data = checkIsEmpty("stack", data, error);
             data = checkIsEmpty("title", data, error);
         }
 
@@ -133,17 +143,17 @@ class Response {
 
         const object = {
             'object': (data, status) => {
-                responseObj.view('error', status ?? 404, data).renderResponse(Response.response);
+                responseObj.view('error', status ?? 404, data).renderResponse(Response.httpResponse);
                 return true;
             },
             'string': (data, status) => {
-                responseObj.view('error', status ?? 404, data).renderResponse(Response.response);
+                responseObj.view('error', status ?? 404, data).renderResponse(Response.httpResponse);
                 return true;
             }
         }
 
         if (Object.keys(object).indexOf(typeof error) == -1 || object[typeof error](data, status) !== true)
-            responseObj.view('error', status, data).renderResponse(Response.response);
+            responseObj.view('error', status, data).renderResponse(Response.httpResponse);
     }
 }
 
@@ -155,8 +165,6 @@ class ResponseType {
     headers;
     type;
 
-    static TYPES = ['view', 'json', 'data', 'download', 'redirect'];
-
     constructor(type, file = null, status = null, server_configuration = null, data = null, headers = null) {
         this.type = type;
         this.file = file;
@@ -166,54 +174,55 @@ class ResponseType {
         this.headers = headers;
     }
 
-    renderResponse(res) {
-        if (res._headerSent)
+    renderResponse(httpResponse = null) {
+        httpResponse = !httpResponse ? Response.httpResponse : httpResponse;
+        if ((!httpResponse || !Response.httpResponse) && httpResponse._headerSent)
             return;
 
-        const setHeaders = (res, headers) => {
+        const setHeaders = (httpResponse, headers) => {
             if (headers == null || typeof headers == 'undefined' || headers.length == 0)
                 return;
 
             for (const header of headers) {
                 const key = Object.keys(header)[0];
-                res.setHeader(key, header[key])
+                httpResponse.setHeader(key, header[key])
             }
         }
 
-        setHeaders(res, this.headers)
+        setHeaders(httpResponse, this.headers)
 
-        const response = {
+        const responseActions = {
             'view': () => {
                 if (this.dataElements && this.dataElements !== undefined)
-                    res.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
+                    httpResponse.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
                 else
-                    res.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, { statusCode: this.status }));
+                    httpResponse.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, { statusCode: this.status }));
                 return true;
             },
             'json': () => {
                 if (typeof this.dataElements !== 'object')
-                    res.status(this.status).json(JSON.stringify(this.dataElements));
+                    httpResponse.status(this.status).json(JSON.stringify(this.dataElements));
                 else
-                    res.status(this.status).json(this.dataElements);
+                    httpResponse.status(this.status).json(this.dataElements);
                 return true;
             },
             'data': () => {
-                res.status(this.status).send(this.dataElements);
+                httpResponse.status(this.status).send(this.dataElements);
                 return true;
             },
             'download': () => {
-                res.status(this.status).download(this.dataElements);
+                httpResponse.status(this.status).download(this.dataElements);
                 return true;
             },
             'redirect': () => {
-                res.redirect(this.file)
+                httpResponse.redirect(this.file)
                 return true;
             }
         }
-        if (Object.keys(response).indexOf(this.type) == -1 || response[this.type]() !== true)
+        if (Object.keys(responseActions).indexOf(this.type) == -1 || responseActions[this.type]() !== true)
             throw Error("Not possible execute this file");
 
-        res.end();
+        httpResponse.end();
     }
 }
 export default Response;

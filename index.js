@@ -1,6 +1,39 @@
 import Application from '#core/Application.js';
 import Cli from '#core/support/Cli.js';
 import Log from '#core/support/Log.js';
+import Container from "#core/container/Container.js";
+import Route from "#core/http/Route.js";
+import Collection from '#core/support/Collection.js';
+
+const route = new Route();
+const container = new Container();
+// container.bind(null, () => new Application())
+//     .then(container.bind(null, () => new Element()))
+//     .then(res => {
+//         console.log(container);
+//     })
+
+// const collection = new Collection();
+
+// const values = Array(4).fill(() => new Application());
+
+// values.reduce((p, v) => p.then(() => collection.add(v)), Promise.resolve()).then(() => {
+//     return collection.get([1,2,3,4,5]).then(el => {
+//         console.log(el);
+//     });
+//     console.log(item);
+// })
+//     Promise.all([
+//     collection.add(() => new Application()),
+//     collection.add(() => new Application()),
+//     collection.add(() => new Application())
+// ])
+//     .then(res => {
+//         collection.first().then(element => {
+//             console.log(element);
+//         })
+//     })
+
 
 
 const application = new Application();
@@ -16,7 +49,7 @@ function drawBar(height = 1) {
                     Log.write("█", false, "\x1b[31m");
                     Log.write("\n");
                 }
-                if(x == width_total - 1){
+                if (x == width_total - 1) {
                     res();
                 }
             }, x * 2);
@@ -165,19 +198,19 @@ readKey().then();
 
 try {
 
-    new Promise(res => {
-        application.startServer();
-        setTimeout(() => res(), 2000);
-    }).then(() => {
-        new Promise(res => {
-            application.stopServer(); console.log("Server closed")
-            setTimeout(() => res(), 2000);
-        }).then(() => {
-            application.startServer();
-        }).then(_ => {
-            console.log("teste");
-        });
-    })
+    // new Promise(res => {
+        application.startServer()
+    //     setTimeout(() => res(), 2000);
+    // }).then(() => {
+    //     new Promise(res => {
+    //         application.stopServer(); console.log("Server closed")
+    //         setTimeout(() => res(), 2000);
+    //     }).then(() => {
+    //         application.startServer();
+    //     }).then(_ => {
+    //         console.log("teste");
+    //     });
+    // })
 
 
 } catch (err) {

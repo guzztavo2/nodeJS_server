@@ -1,10 +1,10 @@
 import Middleware from '#core/http/Middleware.js';
-import Cli from '#core/support/Cli.js';
+import Log from '#core/support/Log.js';
 const middleware = new class extends Middleware {
     identifier = "UserValidation";
 
     handle(request, next) {
-        Cli.log("UserVerification Middleware executed");
+        Log.log("UserVerification Middleware executed");
         next();
     }
 }

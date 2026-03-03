@@ -6,7 +6,7 @@ class Controller {
 
     setConfigFile(request) {
         this.session = request.session;
-        this.response = new Response(this.session, request.response);
+        this.response = new Response(this.session, request.httpResponse());
         
         if (this.title !== undefined)
             this.response.dataToFront = {

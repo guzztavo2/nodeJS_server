@@ -1,8 +1,14 @@
 {
   "public": {
-    "root": "/storage/",
+    "root": "/storage/app/public",
     "url": "/",
     "visibility": "public",
+    "is_recursive": true
+  },
+  "private": {
+    "root": "/storage/app/private",
+    "url": "/storage",
+    "visibility": "private",
     "is_recursive": true
   }
 }

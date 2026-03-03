@@ -11,7 +11,15 @@ class Utils {
     }
 
     static is_empty(data) {
-        return data === null || data === undefined || data.length === 0 || !data ? true : false;
+        return Utils.is_null(data) || Utils.is_blank(data) || !data ? true : false;
+    }
+
+    static is_null(data) {
+        return data === null || data === undefined;
+    }
+
+    static is_blank(data){
+        return data.length === 0;
     }
 
     static is_string(data){
