@@ -2,7 +2,6 @@ import Utils from '#core/support/Utils.js';
 
 class Collection {
     collection = [];
-    quantity = 0;
     keys_not_avaible = ["collection", "quantity"];
     keyMap = {};
 
@@ -182,7 +181,8 @@ class Collection {
 
     getByIndex(index) {
         return this.ready().then(collect => {
-            return collect[index].toArray();
+            if(collect[index])
+                return collect[index].toArray();
         });
     }
 

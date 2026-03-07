@@ -1,4 +1,3 @@
-
 import Session from "#core/http/Session.js";
 import Validator from "#core/support/Validator.js";
 import Response from "#core/http/Response.js";
@@ -11,25 +10,29 @@ class Request {
     initPromise;
 
     constructor(httpRequest = null) {
-        if (httpRequest) {
+        Request.setHttpRequest(httpRequest);
+
+        this.session = new Session(Request.httpRequest);
+
+        this.requests = new Collection(Object.assign(
+            Request.httpRequest.body || {},
+            Request.httpRequest.params || {},
+            Request.httpRequest.query || {}
+        ));
+    }
+
+    static setHttpRequest(httpRequest = false) {
+        if (httpRequest && !Response.httpRequest) {
             Request.httpRequest = httpRequest;
             Response.httpResponse = httpRequest.res;
         }
-
-        this.session = new Session(httpRequest);
-
-        this.requests = new Collection(Object.assign(
-            httpRequest.body || {},
-            httpRequest.params || {},
-            httpRequest.query || {}
-        ));        
     }
 
-    httpRequest(){
+    httpRequest() {
         return Request.httpRequest;
     }
 
-    httpResponse(){
+    httpResponse() {
         return Response.httpResponse;
     }
 

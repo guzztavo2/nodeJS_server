@@ -2,6 +2,7 @@ import fs from 'fs';
 import File from '#core/filesystems/File.js';
 import Directory from '#core/filesystems/Directory.js';
 import Utils from '#core/support/Utils.js';
+import Request from "#core/http/Request.js";
 
 class Response {
     static SERVER_SETTINGS;
@@ -19,20 +20,23 @@ class Response {
         }
         Response.SERVER_SETTINGS = this.env_configuration['APP_URL'] + ":" + this.env_configuration['APP_PORT'];
 
-        Response.setResponse(httpResponse || false);
+        Response.setHttpResponse(httpResponse || false);
 
         if (!Utils.is_empty(session))
             this.session = session;
         return this;
     }
     
-    static setResponse(httpResponse = false) {
+    static setHttpResponse(httpResponse = false) {
         Response.httpResponse = !httpResponse && Response.httpResponse ? Response.httpResponse : httpResponse;
+        if(Response.httpResponse)
+            Request.httpRequest = httpResponse.req;
     }
 
     static serverConfigurations(){
         return { HOME_URL: Response.SERVER_SETTINGS };
     }
+    
     responseTypeFactory(type, status, file = null, server_configuration = null, data = null, headers = null) {
         server_configuration = Object.assign({ HOME_URL: Response.serverConfigurations() }, server_configuration);
         
@@ -176,7 +180,7 @@ class ResponseType {
 
     renderResponse(httpResponse = null) {
         httpResponse = !httpResponse ? Response.httpResponse : httpResponse;
-        if ((!httpResponse || !Response.httpResponse) && httpResponse._headerSent)
+        if ((!httpResponse || !Response.httpResponse) || httpResponse._headerSent)
             return;
 
         const setHeaders = (httpResponse, headers) => {
@@ -185,16 +189,16 @@ class ResponseType {
 
             for (const header of headers) {
                 const key = Object.keys(header)[0];
-                httpResponse.setHeader(key, header[key])
+                httpResponse.setHeader(key, header[key]);
             }
         }
 
-        setHeaders(httpResponse, this.headers)
+        setHeaders(httpResponse, this.headers);
 
         const responseActions = {
             'view': () => {
                 if (this.dataElements && this.dataElements !== undefined)
-                    httpResponse.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
+                        httpResponse.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
                 else
                     httpResponse.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, { statusCode: this.status }));
                 return true;

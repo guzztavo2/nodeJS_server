@@ -1,9 +1,10 @@
 import Log from "#core/support/Log.js";
+import Request from "#core/http/Request.js";
 
 class Session {
     httpRequest;
-    constructor(httpRequest) {
-        this.httpRequest = httpRequest;
+    constructor(httpRequest = null) {
+        this.httpRequest = httpRequest || Request.httpRequest;
     }
 
     create(key, value) {

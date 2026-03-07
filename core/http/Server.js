@@ -1,6 +1,5 @@
 import express from 'express';
 import Request from '#core/http/Request.js';
-import bodyParser from 'body-parser';
 import multer from 'multer';
 import MySql from '#core/database/MySql.js';
 import Response from '#core/http/Response.js';
@@ -10,8 +9,6 @@ import Directory from '#core/filesystems/Directory.js';
 import express_session from 'express-session';
 import mime from 'mime-types';
 import ejs from 'ejs';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
 import RateLimit from "express-rate-limit";
 import helmet from 'helmet';
 import cors from 'cors';
@@ -19,10 +16,7 @@ import Utils from '#core/support/Utils.js';
 import Log from '#core/support/Log.js';
 import Application from '#core/Application.js';
 import Route from "#core/http/Route.js";
-import Config from '#core/support/Config.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 const upload = multer();
 
 class Server {
@@ -31,7 +25,8 @@ class Server {
     server_listenner;
     connections = [];
 
-    constructor(cors_file_path = './config/cors.json') {
+    constructor(httpKernel, cors_file_path = './config/cors.json') {
+        this.httpKernel = httpKernel;
         this.cors_file = new File(cors_file_path);
         this.route = new Route();
     }
@@ -40,7 +35,7 @@ class Server {
         [
             () => Application.env_configurations.init(),
             () => this.create(),
-            () => this.startRoutes(),
+            () => this.initializeRoutes(),
             () => this.initConfigServer(),
             () => this.migrationTable()
         ].reduce((p, v) => {
@@ -82,60 +77,22 @@ class Server {
         }));
     }
 
-    startRoutes() {
+    initializeRoutes() {
         this.expressSession();
         return this.route.defineRoutes(route => {
-            if (Utils.is_empty(route.controller))
-                var [controllerName, controllerMethod] = null;
-            else
-                var [controllerName, controllerMethod] = route.controller.split("::")
-            const renderError = (http_code = 404, err = null) => {
-                Response.error(http_code, err)
-            };
-            return route.middlewares.valuesToArray().then(middlewaresArray => {
-                this.server[route.method](route.url, [upload.fields([])].concat(middlewaresArray), (req, res) => {
-                    const request = new Request(req);
-                    return Config.get("controllers").then(controllerPath => {
-                        const controllerFile = new File(controllerName + ".js", controllerPath);
-                        return controllerFile.importJSFile().then(controller_ => {
-
-                            const controller = (new controller_()).setConfigFile(request);
-
-                            if (Utils.is_empty(controller[controllerMethod]))
-                                return Response.error(401, { "message": "Page not found", "title": "Erro!" });
-
-                            const response = controller[controllerMethod](request);
-
-                            if (response instanceof Promise)
-                                response.then(response_ => {
-                                    if (!Utils.is_empty(response_) && !Utils.is_empty(response_.renderResponse))
-                                        response_.renderResponse(res);
-                                    else
-                                        throw new Error("Response not defined");
-                                }).catch(err => {
-                                    throw err
-                                });
-                            else
-                                if (!Utils.is_empty(response) && !Utils.is_empty(response.renderResponse))
-                                    response.renderResponse(res);
-                                else
-                                    // throw new Error("Response not defined");
-                                    Response.data(response).renderResponse();
-                        }).catch(err => {
-                            Log.error(err);
-                            return renderError(500, err);
-                        });
-                    });
-                });
-            })
-
+            return route.middlewares.valuesToArray().then(middlewaresArray =>
+                this.server[route.method](route.url, [upload.fields([])].concat(middlewaresArray), (httpRequest, httpResponse, httpNext) => {
+                    Server.initializeHTTP(httpRequest, httpResponse);
+                    this.httpKernel.handle(route, httpRequest, httpResponse);
+                })
+            );
         }).then(() => this.route.storageRoutes()).then(files => {
             if (files && Utils.is_array(files))
                 for (const file of files) {
-                    this.server.get(file.file_url, [upload.fields([])], async (req, res) => {
-                        res.setHeader('content-type', mime.lookup(file.file_path));
+                    this.server.get(file.file_url, [upload.fields([])], async (httpRequest, httpResponse) => {
+                        httpResponse.setHeader('content-type', mime.lookup(file.file_path));
                         const _FILE = await File.readData(file.file_path);
-                        ((new Response(req.session, res)).data(_FILE, 200)).renderResponse(res);
+                        ((new Response(httpRequest.session, httpResponse)).data(_FILE, 200)).renderResponse(httpResponse);
                     });
                 }
         })
@@ -149,17 +106,37 @@ class Server {
         ];
     }
 
-    initConfigServer() {
-        this.server.use((req, res) => {
-            Response.error(res, 404, 'Page Not Found');
-        });
+    static initializeHTTP(httpRequest = null, httpResponse = null){        
+        if(!Utils.is_empty(httpRequest))
+            Request.httpRequest = httpRequest;
+        if(!Utils.is_empty(httpResponse))
+            Response.httpResponse = httpResponse;    
+    } 
 
-        this.server.use((err, req, res, next) => { Log.error(err.stack); res.status(500).send('Internal Server Error'); });
+    serverUse(callback) {
+        this.server.use((httpRequest, httpResponse, next) => {
+            Server.initializeHTTP(httpRequest, httpResponse);
+            return callback(httpRequest, httpResponse, next);
+        });
+    }
+
+    serverUseError(callback) {
+        this.server.use((err, httpRequest, httpResponse, next) => {
+            Server.initializeHTTP(httpRequest, httpResponse);
+            return callback(err, httpRequest, httpResponse, next);
+        });
+    }
+
+    initConfigServer() {
+        this.serverUse(() => Response.error(404, 'Page Not Found'))
+        this.serverUseError((err, httpRequest, httpResponse) => {
+            Log.error(err.stack);
+            Response.error(500, { "title": "Internal Server Error" });
+        })
 
         this.server_listenner = this.server.listen(Application.env_configurations.getEnvConfigurations().APP_PORT,
             Application.env_configurations.getEnvConfigurations().APP_URL, (err) => {
-                if (err)
-                    throw (err);
+                if (err) throw (err);
 
                 Log.log("Server Started | http://" + Application.env_configurations.getEnvConfigurations().APP_URL + ":" + Application.env_configurations.getEnvConfigurations().APP_PORT);
             });
@@ -201,8 +178,6 @@ class Server {
         }).catch(err => {
             throw err;
         })
-
-
     }
 }
 export default Server;

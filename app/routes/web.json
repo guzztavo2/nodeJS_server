@@ -7,6 +7,12 @@
   },
   {
     "method": "get",
+    "url": "/",
+    "controller": "UserController::index",
+    "middlewares":["UserValidation"]
+  },
+  {
+    "method": "get",
     "url": "/test",
     "controller": "UserController::mid",
     "middlewares":["UserValidation"]

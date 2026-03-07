@@ -100,7 +100,22 @@ class Validator {
             "email",
             "min",
             "max"
-        ]
+        ];
+    }
+
+    static async validate(validations, messages = null) {
+        const data = this.requestsToObject()
+        const result = await ((new Validator).make(data, validations, messages));
+        const response = new Response(this.session);
+
+        const backAction = response.back({ 'errors': result.errors });
+        if (result.isSuccess == false)
+            if (backAction)
+                backAction.renderResponse(this.response);
+            else
+                response.json({ 'errors': result.errors }, 200).renderResponse(this.response);
+
+        return result;
     }
 }
 
