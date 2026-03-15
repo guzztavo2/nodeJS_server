@@ -54,8 +54,9 @@ class Middleware {
 
     }
 
-    next(request, response, next) {
-        return this.handle(new Request(request, response), next);
+    next(httpRequest, httpResponse, next) {
+        Request.setHttpRequest(httpRequest);
+        return this.handle(new Request(httpRequest, httpResponse), next);
     }
 }
 export default Middleware;

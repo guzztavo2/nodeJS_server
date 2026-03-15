@@ -1,42 +1,87 @@
 import Collection from "#core/support/Collection.js";
+import File from "#core/filesystems/File.js";
+import Utils from "#core/support/Utils.js";
 
 class Container {
-    constructor() {
-        this.bindings = new Collection();
-        this.singletons = new Collection();
-        this.instances = new Collection();
-    }
+    static bindings = new Collection();
+    static singletons = new Collection();
+    static instances = new Collection();
 
     bind(key, factory) {
-        return this.bindings.add(factory, key);
+        Container.bind(key, factory);
     }
 
     singleton(key, factory) {
-        this.singletons.add(factory, key);
+        Container.singleton(key, factory);
     }
 
     instance(key, factory) {
-        this.instances.add(key, factory);
+        Container.instance(key, factory);
     }
 
     make(key, ...args) {
-        return this.instances.get(key).then(instance => {
-            if (instance)
-                return instance['value'];
+        return Container.make(key, args);
+    }
 
-            return this.singletons.getByIndex(key).then(singleton => {
+    static bind(key, factory) {
+        Container.bindings.add(factory, key);
+    }
+
+    static singleton(key, factory) {
+        Container.singletons.add(factory, key);
+    }
+
+    static instance(key, factory) {
+        Container.instances.add(factory, key);
+    }
+
+    static make(key, ...args) {
+        if (!Utils.is_empty(args)) {
+            if(args instanceof Array)
+                args = Utils.filter_empty_array(args);
+                if (Utils.is_empty(args))
+                    args = [];
+            args = args && args.length === 1 ? args[0] : args;
+        }
+        const executeAction = (execute, args) => {
+            return (typeof execute == "function" ?
+                !Utils.is_empty(execute.name) ? new execute(args) :
+                    execute(args) : execute) ?? true;
+        };
+
+        return Container.instances.get(key).then(instance => {
+            if (instance)
+                return executeAction(instance, args);
+
+            return Container.singletons.get(key).then(singleton => {
                 if (singleton) {
                     if (!instance) {
-                        const instance_ = singleton(...args);
-                        this.instance(key, instance_);
+                        instance = executeAction(singleton, args);
+                        Container.instance(key, instance);
                     }
-                    return instance['value'];
+                    return instance;
                 }
-                return this.bindings.getByIndex(key).then(binding => {
-                    return binding['value'](...args);
+                return Container.bindings.get(key).then(binding => {
+                    if (binding)
+                        return executeAction(binding, args);
+
+                    if (typeof key == "function")
+                        return new key(...args);
+
+                    if (Utils.is_string(key)) {
+                        const file = new File(key);
+                        if (file.exists()) {
+                            return file.importJSFile().then(classFile => {
+                                if (classFile) {
+                                    instance = new classFile(args);
+                                    Container.bind(key, classFile);
+                                    return instance;
+                                }
+                            });
+                        }
+                    }
                 });
             });
-
         }).then(resolve => {
             if (!resolve)
                 throw new Error(`Binding '${key}' not found.`);

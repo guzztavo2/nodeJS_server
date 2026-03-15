@@ -246,10 +246,10 @@ class Column {
         if (this.nullable_var !== null)
             notNull = this.nullable_var == true ? "" : " NOT NULL";
 
-        const default_var = !Utils.is_empty(this.default_var) ? " DEFAULT " + this.default_var : "";
-        const autoIncrement = !Utils.is_empty(this.autoIncrement_var) ? " AUTO_INCREMENT" : "";
-        const size = !Utils.is_empty(this.size) ? `(${this.size})` : "";
-        const primary_key_var = !Utils.is_empty(this.primary_key_var) ? " PRIMARY KEY" : "";
+        const default_var = !empty(this.default_var) ? " DEFAULT " + this.default_var : "";
+        const autoIncrement = !empty(this.autoIncrement_var) ? " AUTO_INCREMENT" : "";
+        const size = !empty(this.size) ? `(${this.size})` : "";
+        const primary_key_var = !empty(this.primary_key_var) ? " PRIMARY KEY" : "";
 
         return {
             "column_name": this.name,

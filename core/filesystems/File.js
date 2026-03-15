@@ -47,10 +47,14 @@ class File {
         else
             path = "./";
 
-        if (path.lastIndexOf(this.getFileName()) != -1)
-            this.path = new Directory(Directory.getAbsolutePath(path.substring(0, path.lastIndexOf(this.getFileName()))));
-        else
-            this.path = new Directory(path);
+        const fileNameSplited = this.fileName.split("/");
+
+        if (fileNameSplited.filter(val => val && val.length > 1).length == 1)
+            this.path = new Directory(path.includes(this.fileName) ? path.substr(0, path.lastIndexOf(this.fileName)) :path);
+        else {
+            this.fileName = fileNameSplited.pop();
+            this.path = new Directory(fileNameSplited.join('/'));
+        }
     }
 
     readData(force = false) {
@@ -71,7 +75,7 @@ class File {
     getData() {
         return this.data ?? false;
     }
-    
+
     exists() {
         return File.fileExists(this.getAbsolutePath());
     }

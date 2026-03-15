@@ -35,7 +35,7 @@ class Route {
                         const route = file.getFileNameNoExt();
 
                         return file.readData(true).then(data => {
-                            if (!Utils.is_empty(data))
+                            if (!empty(data))
                                 this.routes.add(JSON.parse(data), route);
                             return val;
                         });

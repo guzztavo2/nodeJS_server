@@ -1,7 +1,5 @@
 import express from 'express';
-import Request from '#core/http/Request.js';
 import multer from 'multer';
-import MySql from '#core/database/MySql.js';
 import Response from '#core/http/Response.js';
 import compression from "compression";
 import File from '#core/filesystems/File.js';
@@ -15,7 +13,7 @@ import cors from 'cors';
 import Utils from '#core/support/Utils.js';
 import Log from '#core/support/Log.js';
 import Application from '#core/Application.js';
-import Route from "#core/http/Route.js";
+import Container from '#core/container/Container.js';
 
 const upload = multer();
 
@@ -28,12 +26,11 @@ class Server {
     constructor(httpKernel, cors_file_path = './config/cors.json') {
         this.httpKernel = httpKernel;
         this.cors_file = new File(cors_file_path);
-        this.route = new Route();
+        this.container = Container;
     }
 
     start() {
         [
-            () => Application.env_configurations.init(),
             () => this.create(),
             () => this.initializeRoutes(),
             () => this.initConfigServer(),
@@ -52,7 +49,7 @@ class Server {
     }
 
     create() {
-        if (Utils.is_empty(this.server))
+        if (empty(this.server))
             this.server = express();
 
         this.serverReceiveDataConfiguration().forEach(el => this.server.use(el));
@@ -70,32 +67,32 @@ class Server {
 
     expressSession() {
         this.server.use(express_session({
-            secret: Application.env_configurations.getEnvConfigurations().APP_SECRET,
+            secret: Application.Env.getEnvConfigurations().APP_SECRET,
             resave: false,
             saveUninitialized: false,
-            cookie: { secure: Application.env_configurations.getEnvConfigurations().APP_ENV === 'production' }
+            cookie: { secure: Application.Env.getEnvConfigurations().APP_ENV === 'production' }
         }));
     }
 
     initializeRoutes() {
         this.expressSession();
-        return this.route.defineRoutes(route => {
-            return route.middlewares.valuesToArray().then(middlewaresArray =>
-                this.server[route.method](route.url, [upload.fields([])].concat(middlewaresArray), (httpRequest, httpResponse, httpNext) => {
-                    Server.initializeHTTP(httpRequest, httpResponse);
-                    this.httpKernel.handle(route, httpRequest, httpResponse);
-                })
-            );
-        }).then(() => this.route.storageRoutes()).then(files => {
-            if (files && Utils.is_array(files))
-                for (const file of files) {
-                    this.server.get(file.file_url, [upload.fields([])], async (httpRequest, httpResponse) => {
-                        httpResponse.setHeader('content-type', mime.lookup(file.file_path));
-                        const _FILE = await File.readData(file.file_path);
-                        ((new Response(httpRequest.session, httpResponse)).data(_FILE, 200)).renderResponse(httpResponse);
-                    });
-                }
-        })
+        return this.container.make("route").then(route =>
+            this.route = route).then(() =>
+                this.route.defineRoutes(route =>
+                    route.middlewares.valuesToArray().then(middlewaresArray =>
+                        this.server[route.method](route.url, [upload.fields([])].concat(middlewaresArray),
+                            (httpRequest, httpResponse, httpNext) =>
+                                Server.initializeHTTP(httpRequest, httpResponse).then(this.httpKernel.handle(route)))))
+                    .then(() => this.route.storageRoutes()).then(files => {
+                        if (files && Utils.is_array(files))
+                            for (const file of files)
+                                this.server.get(file.file_url, [upload.fields([])], async (httpRequest, httpResponse) => {
+                                    httpResponse.setHeader('content-type', mime.lookup(file.file_path));
+                                    const _FILE = await File.readData(file.file_path);
+                                    return ((response(httpRequest.session)).data(_FILE, 200))
+                                        .then(res => res.renderResponse(httpResponse))
+                                });
+                    }));
     }
 
     serverReceiveDataConfiguration() {
@@ -106,39 +103,40 @@ class Server {
         ];
     }
 
-    static initializeHTTP(httpRequest = null, httpResponse = null){        
-        if(!Utils.is_empty(httpRequest))
-            Request.httpRequest = httpRequest;
-        if(!Utils.is_empty(httpResponse))
-            Response.httpResponse = httpResponse;    
-    } 
+    static initializeHTTP(httpRequest = null, httpResponse = null) {
+        if (!empty(httpRequest))
+            return Container.make("httpRequest", httpRequest);
+        else if (!empty(httpResponse))
+            return Container.make("httpResponse", httpResponse);
+    }
 
     serverUse(callback) {
         this.server.use((httpRequest, httpResponse, next) => {
-            Server.initializeHTTP(httpRequest, httpResponse);
-            return callback(httpRequest, httpResponse, next);
+            return Server.initializeHTTP(httpRequest, httpResponse).then(() => callback(httpRequest, httpResponse, next));
         });
     }
 
     serverUseError(callback) {
         this.server.use((err, httpRequest, httpResponse, next) => {
-            Server.initializeHTTP(httpRequest, httpResponse);
-            return callback(err, httpRequest, httpResponse, next);
+            return Server.initializeHTTP(httpRequest, httpResponse).then(() => callback(err, httpRequest, httpResponse, next));
         });
     }
 
     initConfigServer() {
-        this.serverUse(() => Response.error(404, 'Page Not Found'))
+        this.serverUse(() => {
+            Log.error("Page not found");
+            Response.error(404, 'Page Not Found')
+        })
         this.serverUseError((err, httpRequest, httpResponse) => {
-            Log.error(err.stack);
+            Log.error(err.stack || err);
             Response.error(500, { "title": "Internal Server Error" });
         })
 
-        this.server_listenner = this.server.listen(Application.env_configurations.getEnvConfigurations().APP_PORT,
-            Application.env_configurations.getEnvConfigurations().APP_URL, (err) => {
+        this.server_listenner = this.server.listen(Application.Env.getEnvConfigurations().APP_PORT,
+            Application.Env.getEnvConfigurations().APP_URL, (err) => {
                 if (err) throw (err);
 
-                Log.log("Server Started | http://" + Application.env_configurations.getEnvConfigurations().APP_URL + ":" + Application.env_configurations.getEnvConfigurations().APP_PORT);
+                Log.log("Server Started | http://" + Application.Env.getEnvConfigurations().APP_URL + ":" + Application.Env.getEnvConfigurations().APP_PORT);
             });
 
         this.server_listenner.on('connection', (connection) => {
@@ -163,21 +161,24 @@ class Server {
     }
 
     requestLimiter() {
-        this.server.use(RateLimit({
-            windowMs: 1 * 60 * 1000,
-            max: 20,
-        }));
+        return this.container.make("Config")
+            .then(config => config.get("requestLimiter").then(requestLimiter => this.server.use(RateLimit({
+                windowMs: requestLimiter['windowMs'],
+                max: requestLimiter['max']
+            }))));
     }
 
     migrationTable() {
-        const mysql = new MySql();
-        return mysql.verifyTableExist('migrations').then(res => {
-            const existMigration = res != 0;
-            if (!existMigration)
-                mysql.createMigrationTable().then();
-        }).catch(err => {
-            throw err;
-        })
+        return this.container.make("db").then(db => {
+            return db.verifyTableExist('migrations').then(res => {
+                const existMigration = res != 0;
+                if (!existMigration)
+                    return db.createMigrationTable();
+            }).catch(err => {
+                throw err;
+            })
+        });
+
     }
 }
 export default Server;

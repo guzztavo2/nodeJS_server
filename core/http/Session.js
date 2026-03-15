@@ -2,34 +2,30 @@ import Log from "#core/support/Log.js";
 import Request from "#core/http/Request.js";
 
 class Session {
-    httpRequest;
-    constructor(httpRequest = null) {
-        this.httpRequest = httpRequest || Request.httpRequest;
-    }
-
+   
     create(key, value) {
-        this.httpRequest.session[key] = value;
-        this.httpRequest.session.save(err => {
+        Request.httpRequest.session[key] = value;
+        Request.httpRequest.session.save(err => {
             if (err)
                 Log.error(err);
         });
     }
 
     getByKey(key) {
-        return this.httpRequest.session[key] ?? null;
+        return Request.httpRequest.session[key] ?? null;
     }
 
     deleteByKey(key) {
-        if (this.httpRequest.session[key] !== undefined) {
-            delete this.httpRequest.session[key];
-            this.httpRequest.session.save();
+        if (Request.httpRequest.session[key] !== undefined) {
+            delete Request.httpRequest.session[key];
+            Request.httpRequest.session.save();
             return true;
         }
         return false;
     }
     
     all() {
-        return this.httpRequest.session ?? false;
+        return Request.httpRequest.session ?? false;
     }
 }
 

@@ -15,18 +15,20 @@ class Collection {
 
     getLength() {
         return this.ready().then(collection => {
-            if (!Utils.is_empty(this.quantity))
+            if (!empty(this.quantity))
                 return this.quantity;
             return collection.collection.length;
         })
     }
 
     synchronize() {
-        return collection.ready().then(collection => {
+        return this.ready().then(collection => {
             const sinchronizedCollection = new Collection();
+            sinchronizedCollection.keyMap = this.keyMap;
             sinchronizedCollection.collection = this.collection;
-            sinchronizedCollection.map((value_, index_) => collection[index_] = value_.getValue());
-            return sinchronizedCollection;
+            return sinchronizedCollection.map((value_, index_) => {
+                sinchronizedCollection[index_] = value_.getValue()
+            }, false).then(() => sinchronizedCollection);
         });
 
     }
@@ -42,20 +44,20 @@ class Collection {
             const data = new TypeCollection(index, value);
             this[index] = data;
             this.collection.push(data);
-            if(!Utils.is_empty(oldIndex))
+            if (!empty(oldIndex))
                 this.keyMap[index] = oldIndex;
 
             this.collection_len = (this.collection_len || 0) + 1;
         };
 
-        if (!Utils.is_empty(key) && !this.keys_not_avaible.includes(key) && Utils.is_empty(this.collection[key]))
+        if (!empty(key) && !this.keys_not_avaible.includes(key) && !empty(this.collection[key]))
             createValue(value, key);
         else {
-            let newIndex = !Utils.is_empty(key) ? key + "_" : 0;
+            let newIndex = !empty(key) ? key + "_" : 0;
             let whileKey = 0;
             while (true) {
                 whileKey += 1;
-                if (Utils.is_empty(this.collection[newIndex + whileKey])) {
+                if (empty(this.collection[newIndex + whileKey])) {
                     newIndex = newIndex + whileKey;
                     break;
                 }
@@ -104,22 +106,18 @@ class Collection {
 
     filter(func_) {
         const collectionFiltered = new Collection();
-        return this.ready().then(() => {
-            const tasks = this.collection.map((val, key) => {
-                key = !Utils.is_empty(this.keyMap[key]) ? this.keyMap[key] : key;
-                return Promise.resolve(func_(val.getValue(), key)).then(res => {
-                    if (res)
-                        collectionFiltered.add(val.getValue(), val.getKey());
-                });
+        return this.map((val, key) => {
+            key = !empty(this.keyMap[key]) ? this.keyMap[key] : key;
+            return Promise.resolve(func_(val, key)).then(res => {
+                if (res)
+                    collectionFiltered.add(val, key);
             });
-
-            return Promise.all(tasks).then(() => collectionFiltered);
-        });
+        }).then(() => collectionFiltered);
     }
 
     map(func_, getValue = true) {
         const promises = this.collection.map((item, i) => {
-            i = !Utils.is_empty(this.keyMap[item.getKey()]) ? this.keyMap[item.getKey()] : item.getKey(); 
+            i = !empty(this.keyMap[item.getKey()]) ? this.keyMap[item.getKey()] : item.getKey();
             const resultFunc = func_(getValue ? item.getValue() : item, i);
             return resultFunc instanceof Promise ? resultFunc : Promise.resolve(resultFunc);
         });
@@ -144,12 +142,7 @@ class Collection {
     }
 
     removeByKey(key) {
-        const index = this.collection.findIndex((value) => {
-            return (value.getKey()).indexOf(key) != -1;
-        });
-
-        this.collection.splice(index, 1);
-        return this.synchronize();
+        return this.filter((val, key_) => key_ !== key).then(collection => collection.synchronize());
     }
 
     removeByValue(value) {
@@ -166,11 +159,11 @@ class Collection {
     get(key) {
         return new Promise(resolve => this.filter((value_, index) => {
             if (Utils.is_array(key)) {
-                if (key.includes(value_.getKey()))
+                if (key.includes(index))
                     return true;
             } else
-                if ((String(value_.getKey())).indexOf(key) != -1)
-                    return resolve(value_.getValue());
+                if ((String(index)).indexOf(key) != -1)
+                    return resolve(value_);
 
         }).then(collection => collection.getLength().then(numberOfItems => {
             if (numberOfItems == 0)
@@ -181,7 +174,7 @@ class Collection {
 
     getByIndex(index) {
         return this.ready().then(collect => {
-            if(collect[index])
+            if (collect[index])
                 return collect[index].toArray();
         });
     }
@@ -228,24 +221,6 @@ class Collection {
         });
     }
 
-    // createFromArrayObjects(array_) {
-    //     Utils.validateArray(array_, 'array_');
-
-    //     return Promise.resolve(array_).then(resolvedArray => {
-    //         const tasks = [];
-    //         for (const key in resolvedArray) {
-    //             const value = resolvedArray[key];
-    //             tasks.push(() => this.add(typeof value === "object" ? Object.assign({}, value) : value));
-    //         }
-    //         return tasks.reduce((p, v) => {
-    //             return p.then(() => v())
-    //         }, Promise.resolve()).then(() => {
-    //             return this;
-    //         });
-    //     });
-
-    // }
-
     static createFromArrayObjects(array_) {
         const collection = new Collection(array_);
         return collection;
@@ -256,8 +231,25 @@ class Collection {
         return this.map((val) => values.push(val)).then(() => values);
     }
 
+    toObject() {
+        const obj = {};
+        return this.ready().then(collection => {
+            return collection.map((val, key) => {
+                obj[key] = val;
+            }).then(() => obj);
+        }).then(obj => obj);
+
+
+        // then(() => {
+        //     return obj;
+        // });
+    }
+
     toArray() {
-        return this.map(val => val.toArray(), false);
+        const arr = [];
+        return this.map(val => {
+            arr.push(val.toArray());
+        }, false).then(() => arr);
     }
 
     static toArray(collection) {

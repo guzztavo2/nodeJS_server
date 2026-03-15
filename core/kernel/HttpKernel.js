@@ -13,11 +13,11 @@ class HttpKernel {
         const [controllerName, controllerMethod] = route.controller.split("::");
 
         const renderHttpError = (http_code = 404, err = null) => {
-            Response.error(http_code, err)
+            return Response.error(http_code, err)
         };
 
         const renderHttpResponse = (response) => {
-            if (!Utils.is_empty(response) && !Utils.is_empty(response.renderResponse)) response.renderResponse();
+            if (!empty(response) && response.constructor.name === "ResponseType") response.renderResponse();
             else Response.data(response, 200).renderResponse();
         };
 
@@ -25,24 +25,23 @@ class HttpKernel {
             return this.container.make("request").then(request => {
                 const controllerFile = new File(controllerName + ".js", controllerPath);
 
-                return controllerFile.importJSFile().then(controller_ => {
-                    
-                    const controller = (new controller_()).setConfigFile(request);
+                return controllerFile.importJSFile().then(controllerClass =>
+                    this.container.make(controllerClass).then(controller => {
+                        controller = controller.setConfigFile(request);
 
-                    if (Utils.is_empty(controller[controllerMethod]))
-                        return renderHttpError(401, { "message": "Page not found", "title": "Erro!" });
+                        if (empty(controller[controllerMethod]))
+                            return renderHttpError(401, { "message": "Page not found", "title": "Erro!" });
 
-                    const response = controller[controllerMethod](request);
+                        const response = controller[controllerMethod](request);
 
-                    if (response instanceof Promise)
-                        return response.then(response_ => renderHttpResponse(response_)).catch(err => { throw err });
-                    else
-                        renderHttpResponse(response);
-
-                }).catch(err => {
-                    Log.error(err);
-                    return renderHttpError(500, err);
-                });
+                        if (response instanceof Promise)
+                            return response.then(response_ => renderHttpResponse(response_)).catch(err => { throw err });
+                        else
+                            renderHttpResponse(response);
+                    })).catch(err => {
+                        Log.error(err);
+                        return renderHttpError(500, err);
+                    });
             });
         });
     }

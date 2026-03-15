@@ -3,53 +3,70 @@ import File from '#core/filesystems/File.js';
 import Directory from '#core/filesystems/Directory.js';
 import Utils from '#core/support/Utils.js';
 import Request from "#core/http/Request.js";
+import Collection from '#core/support/Collection.js';
 
 class Response {
     static SERVER_SETTINGS;
     env_configuration;
-    HEADERS = [];
     dataToFront = {};
     session;
     static httpResponse;
     static VIEWS_DIRECTORY = new Directory("/resources/views");
 
-    constructor(session = null, httpResponse = null) {
+    constructor(session = null) {
         this.env_configuration = {
             APP_URL: process.env.APP_URL,
             APP_PORT: process.env.APP_PORT
         }
         Response.SERVER_SETTINGS = this.env_configuration['APP_URL'] + ":" + this.env_configuration['APP_PORT'];
 
-        Response.setHttpResponse(httpResponse || false);
-
-        if (!Utils.is_empty(session))
+        if (!empty(session))
             this.session = session;
+
+        this.setHeader();
+    }
+
+    setHttpResponse(httpResponse) {
+        Response.setHttpResponse(httpResponse);
         return this;
     }
-    
-    static setHttpResponse(httpResponse = false) {
-        Response.httpResponse = !httpResponse && Response.httpResponse ? Response.httpResponse : httpResponse;
-        if(Response.httpResponse)
+
+    static setHttpResponse(httpResponse) {
+        Response.httpResponse = httpResponse;
+        if (Response.httpResponse)
             Request.httpRequest = httpResponse.req;
     }
 
-    static serverConfigurations(){
+    static serverConfigurations() {
         return { HOME_URL: Response.SERVER_SETTINGS };
     }
-    
+
     responseTypeFactory(type, status, file = null, server_configuration = null, data = null, headers = null) {
-        server_configuration = Object.assign({ HOME_URL: Response.serverConfigurations() }, server_configuration);
-        
-        data = !Utils.is_empty(this.dataToFront) && Utils.is_array(data) ? Object.assign(this.dataToFront, data || {}) : 
-        Utils.is_empty(this.dataToFront) && !Utils.is_array(data) ? Object.assign(this.dataToFront, {data} || {}) : data;
-        
-        headers = Utils.is_empty(headers) ? this.HEADERS : Object.assign(this.HEADERS, headers);
-        return Response.responseTypeFactory(type, status, file, server_configuration, data, headers)
+        server_configuration = Object.assign(Response.serverConfigurations(), server_configuration);
+
+        if (!empty(this.dataToFront)) {
+            if (!empty(data) && (Utils.is_array(data) || Utils.is_class(data, "object")))
+                data = Object.assign(this.dataToFront, data || {});
+            else
+                if (empty(data))
+                    data = this.dataToFront;
+                else
+                    data = Object.assign(this.dataToFront, { 0: data } || {});
+        }
+
+        this.appendHeaders(headers);
+        return this.headers.toObject().then(headers => {
+            if (!empty(headers)) {
+                return Response.responseTypeFactory(type, status, file, server_configuration, data, headers)
+            } else
+                return Response.responseTypeFactory(type, status, file, server_configuration, data, null)
+        });
+
     }
 
     static responseTypeFactory(type, status, file = null, server_configuration = null, data = null, headers = null) {
-        server_configuration = Object.assign({ HOME_URL: Response.serverConfigurations() }, server_configuration);
-        file = Utils.is_empty(file) ? null : file.getAbsolutePath();
+        server_configuration = Object.assign(Response.serverConfigurations(), server_configuration);
+        file = empty(file) ? null : file.getAbsolutePath();
         return new ResponseType(type, file, status, server_configuration, data, headers);
     }
 
@@ -106,21 +123,39 @@ class Response {
         }
     }
 
-    setHeader(key, value) {
-        this.HEADERS = this.HEADERS.concat({ [key]: value });
+    setHeader(headers = {}) {
+        this.headers = new Collection();
+        this.appendHeaders(headers);
+    }
+
+    appendHeaders(headers = {}) {
+        if (!empty(headers))
+            for (const key in headers) {
+                const val = headers[key];
+                this.addHeader(key, val);
+            }
+    }
+    addHeader(key, value) {
+        if (empty(value))
+            return this;
+
+        if (Utils.is_class(value, "object"))
+            value = JSON.stringify(value);
+
+        this.headers.add(value, key);
+
+        return this;
     }
 
     deleteHeader(key) {
-        for (const header of this.HEADERS)
-            if (header[key] !== undefined)
-                this.HEADERS.splice(this.HEADERS.indexOf(header), 1);
+        return this.headers.removeByKey(key).then(collection => this.headers = collection).then(() => this);
     }
 
     error(status = 404, error = null) {
         return Response.error(status, error);
     }
 
-    static data(data, status = 200, headers = null){
+    static data(data, status = 200, headers = null) {
         return Response.responseTypeFactory("data", status, null, null, data, headers);
     }
 
@@ -130,7 +165,7 @@ class Response {
         };
 
         const checkIsEmpty = (key, data, error) => {
-            if (!Utils.is_empty(error[key]))
+            if (!empty(error[key]))
                 data[key] = error[key];
             return data;
         }
@@ -147,17 +182,15 @@ class Response {
 
         const object = {
             'object': (data, status) => {
-                responseObj.view('error', status ?? 404, data).renderResponse(Response.httpResponse);
-                return true;
+                return responseObj.view('error', status ?? 404, data).then(response => response.renderResponse(Response.httpResponse));
             },
             'string': (data, status) => {
-                responseObj.view('error', status ?? 404, data).renderResponse(Response.httpResponse);
-                return true;
+                return responseObj.view('error', status ?? 404, data).then(response => response.renderResponse(Response.httpResponse));
             }
         }
 
         if (Object.keys(object).indexOf(typeof error) == -1 || object[typeof error](data, status) !== true)
-            responseObj.view('error', status, data).renderResponse(Response.httpResponse);
+            return responseObj.view('error', status, data).then(response => response.renderResponse(Response.httpResponse));
     }
 }
 
@@ -180,16 +213,16 @@ class ResponseType {
 
     renderResponse(httpResponse = null) {
         httpResponse = !httpResponse ? Response.httpResponse : httpResponse;
-        if ((!httpResponse || !Response.httpResponse) || httpResponse._headerSent)
+        if (!httpResponse || httpResponse.headersSent)
             return;
 
         const setHeaders = (httpResponse, headers) => {
             if (headers == null || typeof headers == 'undefined' || headers.length == 0)
                 return;
 
-            for (const header of headers) {
-                const key = Object.keys(header)[0];
-                httpResponse.setHeader(key, header[key]);
+            for (const key in headers) {
+                const header = headers[key];
+                httpResponse.setHeader(key, header);
             }
         }
 
@@ -198,7 +231,7 @@ class ResponseType {
         const responseActions = {
             'view': () => {
                 if (this.dataElements && this.dataElements !== undefined)
-                        httpResponse.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
+                    httpResponse.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, this.dataElements, { statusCode: this.status }));
                 else
                     httpResponse.status(this.status).render(Directory.getAbsolutePath(this.file), Object.assign(this.server_configuration, { statusCode: this.status }));
                 return true;

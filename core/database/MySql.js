@@ -4,12 +4,12 @@ class MySql {
     connection; host; user; password; database; port;
 
     constructor() {
-        this.host = process.env.DB_HOST ?? null;
-        this.user = process.env.DB_USERNAME ?? null;
-        this.password = process.env.DB_PASSWORD ?? null;
-        this.database = process.env.DB_NAME ?? null;
-        this.port = process.env.DB_PORT ?? null;
-
+        this.host = process.env.DB_HOST ?? undefined;
+        this.user = process.env.DB_USERNAME ?? undefined;
+        this.password = process.env.DB_PASSWORD ?? undefined;
+        this.database = process.env.DB_NAME ?? undefined;
+        this.port = process.env.DB_PORT ?? undefined;
+        
         if (this.database == null)
             this.connection = mysql.createConnection({
                 host: this.host,
