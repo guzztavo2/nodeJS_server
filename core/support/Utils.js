@@ -1,7 +1,7 @@
 class Utils {
 
     static validateString(val, name = 'value') {
-        if (!Utils.is_string(val))
+        if (!Utils.isString(val))
             throw new Error(`The ${name} must be a string`);
     }
 
@@ -10,46 +10,46 @@ class Utils {
             throw new Error(`The ${name} must be a array`);
     }
 
-    static filter_empty_array(arr){
+    static filterEmptyArray(arr){
         const newArr = [];
         for(const key in arr){
-            if(!Utils.is_empty(arr[key]))
+            if(!Utils.isEmpty(arr[key]))
                 if(arr[key] instanceof Array)
-                    newArr.push(Utils.filter_empty_array(arr[key]));
+                    newArr.push(Utils.filterEmptyArray(arr[key]));
                 else
                     newArr.push(arr[key]);
         }
         return newArr;
     }
 
-    static is_empty(data) {
-        return Utils.is_null(data) || Utils.is_blank(data) || !data ? true : false;
+    static isEmpty(data) {
+        return Utils.isNull(data) || Utils.isBlank(data) || !data ? true : false;
     }
 
-    static is_null(data) {
+    static isNull(data) {
         return data === null || data === undefined;
     }
 
-    static is_blank(data){
-        if(Utils.is_null(data))
+    static isBlank(data){
+        if(Utils.isNull(data))
             return true;
         
         if(typeof data === "string") return data.trim().length === 0;
 
-        if(this.is_array(data)) return data.length === 0;
+        if(this.isArray(data)) return data.length === 0;
 
         if (typeof data === "object") return Object.keys(data).length === 0;
 
         return false;
     }
 
-    static is_string(data){
-        if(Utils.is_empty(data))
+    static isString(data){
+        if(Utils.isEmpty(data))
             return false;
         return typeof data === "string" || data instanceof String ? true : false;
     }
     
-    static is_class(data, instancedOf){
+    static isClass(data, instancedOf){
         if(instancedOf === Array)
             return Array.isArray(data);
 
@@ -59,11 +59,11 @@ class Utils {
             return typeof data === instancedOf;
     }
 
-    static is_array(data){
-        return this.is_class(data, Array);
+    static isArray(data){
+        return this.isClass(data, Array);
     }
 
-    static define_global(name, callback){
+    static defineGlobal(name, callback){
         global[name] = callback;
     }
 }

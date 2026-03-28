@@ -1,11 +1,11 @@
-import Migration from '#core/database/Migration.js';;
+import Migration from "../../core/database/Migration.js";
 
 const randomMigration = new class extends Migration {
-    table_name = "user";
+    table_name = "teste";
 
     create() {
         return [
-            this.string('name').nullable(true).after('id')
+            this.id()
         ];
     }
 }

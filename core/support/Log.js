@@ -15,9 +15,9 @@ class Log {
         } else
             process.stdout.write(messageFinal);
     }
-
-    static message(message) {
-        if (this.showDateTime) {
+    
+    static message(message, showDateTime = true) {
+        if (this.showDateTime && showDateTime) {
             const dateTime = `[${DateTime.getFormattedDate(null, { dateStyle: 'short', 'timeStyle': 'medium' })}]`;
             console.log(`${dateTime} ${message}`);
         } else
@@ -32,7 +32,7 @@ class Log {
             message = (`[LOG] ${message}`);
         
         console.log(message);
-        this.writeInFile(message, true);
+        this.writeInFile(message);
     }
 
     static info(message) {
@@ -42,7 +42,7 @@ class Log {
         } else
             message = (`[INFO] ${message}`);
         console.log(message);
-        this.writeInFile(message, true);
+        this.writeInFile(message);
     }
 
     static error(message) {
@@ -53,7 +53,7 @@ class Log {
         } else
             message = (`[ERROR] ${message}`);
         console.error(message);
-        this.writeInFile(message, true);
+        this.writeInFile(message);
     }
 
     static writeInFile(log){

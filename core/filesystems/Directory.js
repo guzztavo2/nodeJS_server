@@ -134,13 +134,13 @@ class Directory {
                         else
                             return Directory.isDirectory(absPath).then(isDirectory => {
                                 if (isDirectory)
-                                   return collection.add(new Directory(absPath));
+                                    return collection.add(new Directory(absPath));
 
                             });
                     });
                 });
 
-                Promise.all(tasks).then(() => resolve(collection));
+                return Promise.all(tasks).then(() => resolve(collection));
             });
         });
     }
@@ -187,7 +187,8 @@ class Directory {
             fs.mkdir(path, { recursive: recursive }, err => {
                 if (err)
                     return rej(err);
-                res(new Directory(path.substring(path.lastIndexOf(Directory.PathSep)), path.substring(0, path.lastIndexOf(Directory.PathSep))));
+                const directory = new Directory(path.substring(0, path.lastIndexOf(Directory.PathSep)) + path.substring(path.lastIndexOf(Directory.PathSep)));
+                res(directory);
             });
         })
 

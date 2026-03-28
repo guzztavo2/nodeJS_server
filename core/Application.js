@@ -5,7 +5,6 @@ import HttpKernel from "#core/kernel/HttpKernel.js";
 import DatabaseProvider from "#core/providers/DatabaseProvider.js";
 import HttpProvider from "#core/providers/HttpProvider.js";
 import AppProvider from "#core/providers/AppProvider.js";
-import Directory from "#core/filesystems/Directory.js";
 
 import ApplicationHelpers from "./helpers/ApplicationHelpers.js";
 import HttpHelpers from "./helpers/HttpHelpers.js";
@@ -14,6 +13,7 @@ import HttpHelpers from "./helpers/HttpHelpers.js";
 class Application {
 
     static Env;
+
     constructor() {
         this.initializeHelpers();
         this.container = new Container();
@@ -22,8 +22,19 @@ class Application {
         this.container.singleton("httpKernel", this.httpKernel);
 
         this.server = new Server(this.httpKernel);
+        this.promise = this.container.make("core/support/Env.js").then(env => {
+            Application.Env = env;
+            return env.init();
+        }).then(() => this);
     }
 
+    env(){
+        return Application.Env;
+    }
+
+    ready() {
+        return this.promise;
+    }
 
     registerProviders() {
         [
@@ -36,7 +47,7 @@ class Application {
     }
 
     startServer() {
-        return this.container.make("core/support/Env.js").then(env => { Application.Env = env; return env.init(); }).then(() => this.server.start());
+        return this.ready().then(() => this.server.start());
     }
 
     stopServer() {

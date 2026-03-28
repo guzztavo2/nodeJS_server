@@ -453,5 +453,8 @@ class MySql {
         });
     }
 
+    selectAllMigrations(){
+        return this.selectAll("migrations");
+    }
 }
 export default MySql;

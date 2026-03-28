@@ -45,7 +45,7 @@ class Response {
         server_configuration = Object.assign(Response.serverConfigurations(), server_configuration);
 
         if (!empty(this.dataToFront)) {
-            if (!empty(data) && (Utils.is_array(data) || Utils.is_class(data, "object")))
+            if (!empty(data) && (Utils.isArray(data) || Utils.isClass(data, "object")))
                 data = Object.assign(this.dataToFront, data || {});
             else
                 if (empty(data))
@@ -139,7 +139,7 @@ class Response {
         if (empty(value))
             return this;
 
-        if (Utils.is_class(value, "object"))
+        if (Utils.isClass(value, "object"))
             value = JSON.stringify(value);
 
         this.headers.add(value, key);

@@ -56,11 +56,11 @@ class Collection {
             let newIndex = !empty(key) ? key + "_" : 0;
             let whileKey = 0;
             while (true) {
-                whileKey += 1;
                 if (empty(this.collection[newIndex + whileKey])) {
                     newIndex = newIndex + whileKey;
                     break;
                 }
+                whileKey += 1;
             }
 
             createValue(value, newIndex, key);
@@ -158,7 +158,7 @@ class Collection {
 
     get(key) {
         return new Promise(resolve => this.filter((value_, index) => {
-            if (Utils.is_array(key)) {
+            if (Utils.isArray(key)) {
                 if (key.includes(index))
                     return true;
             } else
@@ -212,7 +212,7 @@ class Collection {
 
             for (const key in resolvedArray) {
                 const value = resolvedArray[key];
-                tasks.push(() => this.add(Utils.is_array(value) ? Object.assign({}, value) : value, key));
+                tasks.push(() => this.add(Utils.isArray(value) ? Object.assign({}, value) : value, key));
             }
 
             return tasks.reduce((p, task) => { return p.then(() => task()) }, Promise.resolve()).then(() => {

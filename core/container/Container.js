@@ -36,16 +36,16 @@ class Container {
     }
 
     static make(key, ...args) {
-        if (!Utils.is_empty(args)) {
+        if (!Utils.isEmpty(args)) {
             if(args instanceof Array)
-                args = Utils.filter_empty_array(args);
-                if (Utils.is_empty(args))
+                args = Utils.filterEmptyArray(args);
+                if (Utils.isEmpty(args))
                     args = [];
             args = args && args.length === 1 ? args[0] : args;
         }
         const executeAction = (execute, args) => {
             return (typeof execute == "function" ?
-                !Utils.is_empty(execute.name) ? new execute(args) :
+                !Utils.isEmpty(execute.name) ? new execute(args) :
                     execute(args) : execute) ?? true;
         };
 
@@ -68,7 +68,7 @@ class Container {
                     if (typeof key == "function")
                         return new key(...args);
 
-                    if (Utils.is_string(key)) {
+                    if (Utils.isString(key)) {
                         const file = new File(key);
                         if (file.exists()) {
                             return file.importJSFile().then(classFile => {

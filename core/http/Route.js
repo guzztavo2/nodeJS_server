@@ -54,7 +54,7 @@ class Route {
         return routesFromFile.map((val, key) => {
             const route_s = val;
 
-            if (Utils.is_array(route_s)) {
+            if (Utils.isArray(route_s)) {
                 const tasks = [];
                 for (const route_ of route_s) {
                     if (key !== 'web')

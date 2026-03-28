@@ -2,8 +2,6 @@ import express from 'express';
 import multer from 'multer';
 import Response from '#core/http/Response.js';
 import compression from "compression";
-import File from '#core/filesystems/File.js';
-import Directory from '#core/filesystems/Directory.js';
 import express_session from 'express-session';
 import mime from 'mime-types';
 import ejs from 'ejs';
@@ -25,7 +23,7 @@ class Server {
 
     constructor(httpKernel, cors_file_path = './config/cors.json') {
         this.httpKernel = httpKernel;
-        this.cors_file = new File(cors_file_path);
+        this.cors_file = File(cors_file_path);
         this.container = Container;
     }
 
@@ -56,8 +54,8 @@ class Server {
         this.server.engine('html', ejs.renderFile);
         this.server.use(compression());
         this.server.set('view engine', 'html');
-        this.server.use('/public', express.static(Directory.getAbsolutePath('./public')));
-        this.server.set('views', Directory.getAbsolutePath('./views'));
+        this.server.use('/public', express.static(Directory().getAbsolutePath('./public')));
+        this.server.set('views', Directory().getAbsolutePath('./views'));
         this.securityPass();
         this.requestLimiter();
         return this.cors_file.readData().then(data => {
@@ -84,15 +82,16 @@ class Server {
                             (httpRequest, httpResponse, httpNext) =>
                                 Server.initializeHTTP(httpRequest, httpResponse).then(this.httpKernel.handle(route)))))
                     .then(() => this.route.storageRoutes()).then(files => {
-                        if (files && Utils.is_array(files))
+                        if (files && Utils.isArray(files))
                             for (const file of files)
                                 this.server.get(file.file_url, [upload.fields([])], async (httpRequest, httpResponse) => {
                                     httpResponse.setHeader('content-type', mime.lookup(file.file_path));
-                                    const _FILE = await File.readData(file.file_path);
+                                    const _FILE = await File().readData(file.file_path);
                                     return ((response(httpRequest.session)).data(_FILE, 200))
                                         .then(res => res.renderResponse(httpResponse))
                                 });
-                    }));
+                    })
+            );
     }
 
     serverReceiveDataConfiguration() {

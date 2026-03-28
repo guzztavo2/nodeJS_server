@@ -1,12 +1,15 @@
-import Env from "#core/support/Env.js";
 import Utils from "./Utils.js";
-import Directory from "#core/filesystems/Directory.js";
 import Promise from "#core/support/Promise.js";
 import Log from "#core/support/Log.js";
 import readline from "readline";
+import Application from "#core/Application.js";
+import { resolve } from "dns";
+import { exec } from "node:child_process";
 
 class Cli {
     arguments = [];
+
+    static application = new Application();
 
     constructor() {
         Cli.prepareEnv().then(() => {
@@ -36,7 +39,7 @@ class Cli {
     }
 
     getPathFromParam(param) {
-        const lastIndexOf = param.lastIndexOf(Directory.PathSep);
+        const lastIndexOf = param.lastIndexOf(Directory().PathSep);
         if (lastIndexOf !== -1) {
             let name = param.substring(lastIndexOf + 1);
             let path = param.substring(0, lastIndexOf + 1);
@@ -48,7 +51,18 @@ class Cli {
         }
         return [null, param];
     }
+    static runningProcessChild(exec_str = "node ", file, params = []) {
+        return new Promise(async (resolve, reject) => {
+            exec(`${exec_str}${file.getAbsolutePath()} ${params.join(" ")}`, (error, stdout, strerr) => {
+                if (error)
+                    return reject(error);
+                if (strerr)
+                    return reject(strerr);
 
+                return resolve(stdout);
+            });
+        });
+    }
     static getArguments(index) {
         return process.argv[index] || false;
     }
@@ -64,7 +78,7 @@ class Cli {
     }
 
     static stringTreatment(str, trim = true, replaceArr = [{ "key": "val" }] || null) {
-        if (!Utils.is_string(str))
+        if (!Utils.isString(str))
             return Log.error("The value must be a string");
         if (trim) {
             str = str.trim();
@@ -81,11 +95,11 @@ class Cli {
     }
 
     static prepareEnv() {
-        return (new Env()).init();
+        return this.application.ready().then(() => this.application.env());
     }
 
-    static log(message) {
-        Log.message(message);
+    static log(message, showDateTime = true) {
+        Log.message(message, showDateTime);
     }
 
     static error(message) {
@@ -131,13 +145,13 @@ class Cli {
     }
 
     static clearConsole() {
-        process.stdout.write('\x1Bc');
+        Log.write('\x1Bc');
     }
 
-    static readyKey(callback) {
+    static readKey(callback) {
         return new Promise((resolve, reject) => {
             const StartStdin = () => {
-                // process.stdin.setRawMode(true);
+                process.stdin.setRawMode(true);
                 process.stdin.resume();
                 process.stdin.setEncoding("utf8");
                 process.stdin.on("data", beforeHandler);
@@ -145,7 +159,7 @@ class Cli {
 
             const StopStdin = () => {
                 process.stdin.removeListener("data", beforeHandler);
-                // process.stdin.setRawMode(false);
+                process.stdin.setRawMode(false);
                 process.stdin.pause();
             }
             const beforeHandler = (key) => {
@@ -167,19 +181,20 @@ class Cli {
 
     }
 
+    static write(message, showDateTime = false, textColor = "", backgroundColor = "") {
+        Log.write(message, showDateTime, textColor, backgroundColor)
+    }
+
     static consoleClear() {
-        process.stdout.write('\x1Bc');
+        Log.write('\x1Bc');
     }
 
     static setCursor(line, col = null) {
         if (line && !col)
-            process.stdout.write(`\x1b[${line}`);
+            Log.write(`\x1b[${line}`);
         else
-            process.stdout.write(`\x1b[${line};${col}H`);
+            Log.write(`\x1b[${line};${col}H`);
     }
-
-
-
 }
 
 export default Cli;

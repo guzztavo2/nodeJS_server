@@ -1,22 +1,25 @@
-import MySql from '#core/database/MySql.js';
-import Directory from '#core/filesystems/Directory.js';
+import Container from '#core/container/Container.js';
 import Cli from '#core/support/Cli.js';
-import Log from '#core/support/Log.js';
 
 class Migrate extends Cli {
 
-    migrationFolderPath = new Directory("migrations", './');
-    path = this.migrationFolderPath.getAbsolutePath();
     files = [];
-    static mysql = null;
+    static DB = null;
 
     tables_created = []
     tables_updated = []
 
+    initializeModelsPath() {
+        return Config().get("migrations").then(migrations_path => {
+            this.path = migrations_path;
+            this.migrationFolderPath = Directory(this.path);
+        });
+    }
+
     createMigrationTableIfNotExist() {
-        return Migrate.mysql.verifyTableExist('migrations').then(res_ => {
+        return Migrate.DB.verifyTableExist('migrations').then(res_ => {
             if (!res_)
-                return Migrate.mysql.createMigrationTable().then().catch(err => {
+                return Migrate.DB.createMigrationTable().then().catch(err => {
                     throw err;
                 });
         }).catch(err => {
@@ -24,40 +27,32 @@ class Migrate extends Cli {
         });
     }
 
-    createTable(result, migration, callback) {
+    prepareTable(result, callback){
         let query = {};
-
+        
         result.forEach(el => {
-            const key = el.toSQL().column_name;
-            const sql = el.toSQL().sql;
-            const object = { [key]: sql };
-            query = {
-                ...query, ...object
-            };
-            callback(el);
-        });
+            const SQL = el.toSQL();
+            const key = SQL.column_name;
+            const sql = SQL.sql;
 
-        return Migrate.mysql.createTable(migration.table_name, query);
+            const obj = {[key]:sql};
+
+            query = {...query, ...obj};
+            callback(el);
+        })
+        return query;
+    }
+    createTable(result, migration, callback) {
+        const query = this.prepareTable(result, callback);
+        return Migrate.DB.createTable(migration.table_name, query);
     }
 
     alterTable(result, migration, callback) {
-        let query = {};
-
-        result.forEach(el => {
-            const key = el.toSQL().column_name;
-            const sql = el.toSQL().sql;
-            const object = { [key]: sql };
-            query = {
-                ...query, ...object
-            };
-            callback(el);
-
-        });
-        return Migrate.mysql.alterTable(migration.table_name, query);
+        const query = this.prepareTable(result, callback);
+        return Migrate.DB.alterTable(migration.table_name, query);
     }
 
     createTableOrUpdate(migration) {
-
         const constraints = {
             unique: [],
             foreignKey: [],
@@ -67,7 +62,7 @@ class Migrate extends Cli {
             after: []
         };
 
-        return Migrate.mysql.verifyTableExist(migration.table_name).then(res => {
+        return Migrate.DB.verifyTableExist(migration.table_name).then(res => {
             const checkConstraints = (el) => {
                 if (el.check_var)
                     constraints.check = constraints.check.concat({ column: el.name, value: (el.check_var) });
@@ -85,35 +80,41 @@ class Migrate extends Cli {
 
             if (res == false) {
                 this.tables_created.push(migration.table_name)
-                return this.createTable(migration.create(), migration, (el) => { checkConstraints(el) }).then(_ => Migrate.mysql.addConstraint(migration.table_name, constraints));
+                return this.createTable(migration.create(), migration, (el) => { checkConstraints(el) }).then(_ => Migrate.DB.addConstraint(migration.table_name, constraints));
             } else {
                 this.tables_updated.push(migration.table_name)
-                return this.alterTable(migration.create(), migration, (el) => { checkConstraints(el) }).then(_ => Migrate.mysql.addConstraint(migration.table_name, constraints));
+                return this.alterTable(migration.create(), migration, (el) => { checkConstraints(el) }).then(_ => Migrate.DB.addConstraint(migration.table_name, constraints));
             }
         }).catch(err => {
-            Log.error(err);
+            Cli.error(err);
         });
     }
 
     beforeHandle() {
-        Migrate.mysql = new MySql();
-        return this.migrationFolderPath.readDirectory().then(collection => {
-            this.files = collection.toArray().sort((a, b) => a.getFileName() < b.getFileName() ? -1 : 1);
-
-            return this.createMigrationTableIfNotExist().then().catch(err => Cli.exitError(err));
+        return Container.make("db").then(db => {
+            Migrate.DB = db;
+            return this.migrationFolderPath.readDirectory().then(files => {
+                return files.valuesToArray().then(files => {
+                    this.files = files.sort((a, b) => {
+                        const parse = f => f.getFileName().split('.')[0];
+                        return parse(a).localeCompare(parse(b));
+                    });
+                    return this.createMigrationTableIfNotExist().then().catch(err => Cli.exitError(err));
+                });
+            });
         });
     }
 
     useFiles() {
         const migrated = [];
-        return Migrate.mysql.selectAll('migrations').then(res => {
+        return Migrate.DB.selectAll('migrations').then(res => {
             let names = [];
-            if (res.length !== 0)
+            if (!empty(res))
                 names = res.map(val => val.name);
 
             const executeMySql = (migration, file) => {
                 return this.createTableOrUpdate(migration).then(() =>
-                    Migrate.mysql.insertValue('migrations', ['name'], [file.getFileName()])
+                    Migrate.DB.insertValue('migrations', ['name'], [file.getFileName()])
                 );
             };
 
@@ -140,11 +141,16 @@ class Migrate extends Cli {
 
     handle() {
         return this.useFiles().then((migrated) => {
-            Log.message(`\n\nMigrate as successful.\nCreated tables: 
-                ${this.tables_created.join(", ")}\nUpdated tables: ${this.tables_updated.join(", ")} `);
-            if (migrated.length > 0) {
-                Log.message(`\nList of files migrated:\n${migrated.map(val => val.getRelativePath()).join('\n')}\n`)
-            }
+            Cli.log(`Migrate as successful:`);
+            if (!empty(this.tables_created) || !empty(this.tables_updated)) {
+                if (!empty(this.tables_created))
+                    Cli.log(`\nCreated tables: ${this.tables_created.join(", ")}`);
+                if (!empty(this.tables_updated))
+                    Cli.log(`\nUpdated tables: ${this.tables_updated.join(", ")}`);
+                if (!empty(migrated.length)) 
+                    Cli.log(`\nList of files migrated:\n${migrated.map(val => val.getRelativePath()).join('\n')}\n`)
+            } else
+                Cli.log("There are no tables to migrate.");
         }).catch(err => {
             throw err
         });

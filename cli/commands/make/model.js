@@ -1,36 +1,39 @@
-import File from "#core/filesystems/File.js";
-import Directory from '#core/filesystems/Directory.js';
 import Cli from '#core/support/Cli.js';
 
 class createModel extends Cli {
 
     modelName = Cli.getArguments(2);
-    modelDirectory = new Directory("models", "./models");
-    path = this.modelDirectory.getAbsolutePath();
+
+    initializeModelsPath() {
+        return Config().get("models").then(models_path => {
+            this.path = models_path + Directory().PathSep;
+            this.modelDirectory = Directory(this.path);
+        });
+    }
 
     beforeHandle() {
         Cli.log("Creating Model...");
         if (!this.modelName)
             throw Error("Model name is required.");
 
-        this.path = this.modelDirectory.getAbsolutePath() + Directory.PathSep;
-        const path = this.getPathFromParam(this.modelName);
-        this.modelName = path[1];
+        return this.initializeModelsPath().then(() => {
+            const path = this.getPathFromParam(this.modelName);
+            this.modelName = path[1];
 
-        if (path[0]) {
-            this.path = Directory.getAbsolutePath(this.path + path[0]);
-            this.modelDirectory = new Directory(this.path);
-            return Directory.makeDirectories(this.path, true);
-        }
-
+            if (path[0]) {
+                this.path = Directory().getAbsolutePath(this.path + path[0]);
+                this.modelDirectory = Directory(this.path);
+                return Directory().makeDirectories(this.path, true);
+            }
+        })
     }
 
     handle() {
-        const modelFile = new File(this.modelName + ".js", this.path);
-        const modelResourcePath = Directory.getRelativePath(Directory.getAbsolutePath("./resources/Model.js"), this.modelDirectory.getAbsolutePath());
-        
+        const modelFile = File(this.modelName + ".js", this.path);
+        const modelResourcePath = Directory().getRelativePath(Directory().getAbsolutePath("./resources/Model.js"), this.modelDirectory.getAbsolutePath());
+
         return this.modelDirectory.readDirectory().then(collection =>
-            collection.filter(val => val.getValue() instanceof File && val.getValue().getAbsolutePath() == modelFile.getAbsolutePath()))
+            collection.filter(val => val.getValue() instanceof File() && val.getValue().getAbsolutePath() == modelFile.getAbsolutePath()))
             .then(collection => {
                 if (collection.getLength() > 0)
                     throw "File aready exists: " + modelFile.getAbsolutePath();

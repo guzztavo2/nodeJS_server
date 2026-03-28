@@ -1,4 +1,4 @@
-import Migration from '../resources/Migration.js';
+import Migration from '#core/database/Migration.js';
 
 const randomMigration = new class extends Migration {
     table_name = "user";
