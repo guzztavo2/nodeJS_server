@@ -1,6 +1,5 @@
 ToDo
 # Logs
-logs
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -133,4 +132,5 @@ dist
 .vercel
 
 # app
-storage/
+/storage/app/private/
+/storage/app/public/

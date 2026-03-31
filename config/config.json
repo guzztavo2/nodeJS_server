@@ -1,0 +1,13 @@
+{
+  "controllers": "app/controllers",
+  "middlewares": "app/middlewares",
+  "models": "app/models",
+  "routes": "app/routes",
+  "migrations": "database/migrations",
+  "storage": "storage",
+  "websockets": true,
+  "requestLimiter": {
+    "windowMs": 60000,
+    "max": 20
+  }
+}
