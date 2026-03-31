@@ -4,26 +4,32 @@ import Log from "#core/support/Log.js";
 import readline from "readline";
 import Application from "#core/Application.js";
 import { resolve } from "dns";
-import { exec } from "node:child_process";
+import { fork } from "node:child_process";
 
 class Cli {
     arguments = [];
 
     static application = new Application();
+    static shouldExit = true;
 
     constructor() {
+        if (Cli.getArguments().includes("silent"))
+            Log.executeConsoleLog = false;
+
         Cli.prepareEnv().then(() => {
             this.arguments = process.argv;
             return Promise.checkPromise(this.beforeHandle()).then((res_) => {
                 return Promise.checkPromise(this.handle(res_)).then(() => {
-                    Cli.exit("CLI process finished.");
+                    if (Cli.shouldExit)
+                        Cli.exit("CLI process finished.");
                 }).catch(err => {
                     Cli.logError(`CLI process failed: ${err}`);
                 }).finally((res) => Promise.checkPromise(this.afterHandle(res_)));
             }).catch(err_ => {
                 Cli.logError(`CLI process failed: ${err_}`);
             }).finally(() => {
-                Cli.exit();
+                if (Cli.shouldExit)
+                    Cli.exit();
             });
         }).catch(err => {
             Cli.exitError(`Failed to prepare environment: ${err}`);
@@ -51,20 +57,24 @@ class Cli {
         }
         return [null, param];
     }
-    static runningProcessChild(exec_str = "node ", file, params = []) {
-        return new Promise(async (resolve, reject) => {
-            exec(`${exec_str}${file.getAbsolutePath()} ${params.join(" ")}`, (error, stdout, strerr) => {
-                if (error)
-                    return reject(error);
-                if (strerr)
-                    return reject(strerr);
+    static runningProcessChild(file, params = []) {
+        return new Promise((resolve, reject) => {
+            const child = fork(file.getAbsolutePath(), params, { execArgv: [] });
 
-                return resolve(stdout);
+            let output = '';
+            child.on('message', msg => output += msg);
+            child.on('error', reject);
+            child.on('exit', code => {
+                if (code !== 0) reject(new Error(`Child exited with code ${code}`));
+                else resolve(output);
             });
         });
     }
     static getArguments(index) {
-        return process.argv[index] || false;
+        if (index)
+            return process.argv[index] || false;
+        else
+            return process.argv;
     }
 
     static exit(message = null, code = null) {

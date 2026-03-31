@@ -10,7 +10,7 @@ class CreateMigration extends Cli {
 
     constructor(migrationName = null) {
         super();
-        this.migrationName = "teste/teste" || Cli.getArguments(2);
+        this.migrationName = migrationName || Cli.getArguments(2);
     }
 
     initializeMigrationPath() {
@@ -58,7 +58,6 @@ class CreateMigration extends Cli {
                         Log.error(`creating file: ${migrationFile.getRelativePath()}`)
                     ).catch(err => Log.error(`creating file: ${migrationFile.getRelativePath()} - ${err}`))
             }).catch(err => { throw Error(`Not possible create directory: ${err}`) });
-
     }
 
     afterHandle() { }

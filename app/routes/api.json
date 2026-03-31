@@ -1,0 +1,8 @@
+[
+  {
+    "method": "get",
+    "url": "/",
+    "controller": "UserController::index",
+    "middlewares":["UserValidation"]
+  }
+]

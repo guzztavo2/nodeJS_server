@@ -6,7 +6,6 @@ class MainCLI extends Cli {
     static application = new Application();
     selector = ">";
 
-    // static MigrationFileClass;
     menus = [
         new Menu("Start Server", 1, null, true),
         new Menu("Migrate", 2),
@@ -23,27 +22,39 @@ class MainCLI extends Cli {
         const menuMigration = new Menu("Migration", 1, async menu =>
             await this.renderMenu(menu.submenus, () => Cli.log("Migrations \n\n\n", false)), true, []);
 
+        const tables = { migrated: [], not_migrated: [] }
         menuMigration.submenus.push(new Menu("List migrations", 1,
             async menu => await this.renderMenu(menu.submenus, async () => {
-                Cli.log("Listing migrations:\n\n", false);
+                Cli.log("Listing migrations:\n\n\n", false);
                 const migrationPath = await Config().get("migrations");
                 const migrationDirectory = Directory(migrationPath)
-                const migrationDirectoryList = await (await migrationDirectory.readRecursiveDirectory()).valuesToArray();
                 const db = await Container().make("db");
                 const results = await db.selectAllMigrations();
 
-                for (const migration of migrationDirectoryList) {
-                    Cli.write(`${migration.getRelativePath()} - `, false, "\x1b[1m")
-                    if (results.find(val => val.name === migration.getFileName())) {
-                        Cli.write(`Migrated`, false, "\x1b[92m")
-                    } else
-                        Cli.write(`Not Migrated`, false, "\x1b[91m")
+                const checkAllMigrations = async (migrationDirectory_, results) => {
+                    const migrationDirectoryList = await (await migrationDirectory_.readRecursiveDirectory()).valuesToArray();
+                    Cli.write(`\n${migrationDirectory_.getRelativePath()}:\n\n`)
+                    for (const migration of migrationDirectoryList) {
+                        if (migration instanceof File()) {
+                            Cli.write(`${migration.getFileName()} - `, false, "\x1b[1m")
+                            if (results.find(val => val.name === migration.getAbsolutePath())) {
+                                Cli.write(`Migrated`, false, "\x1b[92m")
+                                tables.migrated.push(migration);
+                            } else {
+                                Cli.write(`Not Migrated`, false, "\x1b[91m")
+                                tables.not_migrated.push(migration);
+                            }
+                            Cli.write("\n");
+                        } else
+                            await checkAllMigrations(migration, results);
+                    }
+                };
 
-                    Cli.write("\n");
-                }
-                Cli.write("\n");
-
-            }),true, [
+                await checkAllMigrations(migrationDirectory, results);
+                if (!empty(tables.not_migrated) && !menuMigration.submenus[0].submenus.find(val => val.name == "Migrate"))
+                    menuMigration.submenus[0].submenus.push(new Menu("Migrate", 2, () => {
+                    }, false));
+            }), true, [
             new Menu("Back", 1, async () => {
                 return await this.renderMenu(this.findMenu("Migration").submenus);
             }, true)]));
@@ -71,14 +82,13 @@ class MainCLI extends Cli {
 
                     if (result === "no")
                         return await this.renderMenu(menuMigration.submenus);
-                    else{
+                    else {
                         const MigrationFileClass = File("./cli/commands/make/migration.js");
-                        const result = await Cli.runningProcessChild("node ", MigrationFileClass, [response])
+                        const result = await Cli.runningProcessChild(MigrationFileClass, [response, "silent"])
                         console.log(result);
                     }
                 }
 
-                Cli.log("Name inserted, and path: ", false)
             }, false)
         );
 
@@ -200,7 +210,7 @@ class MainCLI extends Cli {
             selectionsFinal[indexActive].active = true;
         }
     }
-    async renderMenu(menus, callbackBeforeRender = null, callAfterRender = null) {
+    async renderMenu(menus = this.menus, callbackBeforeRender = null, callAfterRender = null) {
         while (true) {
             Cli.clearConsole();
 
@@ -265,18 +275,20 @@ class MainCLI extends Cli {
     }
 
     async beforeHandle() {
-        this.prepareMenuMigration();
-        return this.renderMenu(this.findMenu("Migration").submenus);
+        Cli.shouldExit = false;
+        // Log.executeConsoleLog = true;
+        // this.prepareMenuMigration();
+        // return this.renderMenu();
 
-        Cli.log("Before handling CLI process...");
+        // Cli.log("Before handling CLI process...");
     }
 
     afterHandle() {
-        Cli.log("After handling CLI process...");
+        // Cli.log("After handling CLI process...");
     }
 
     handle() {
-
+        return MainCLI.application.startServer();
     }
 
     menu() {

@@ -1,10 +1,10 @@
 import Controller from "#core/http/Controller.js";
 
-class userController extends Controller {
+class socketController extends Controller {
 
     index(request) {
      
     }
 }
 
-export default userController;
+export default socketController;

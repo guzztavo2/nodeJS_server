@@ -114,13 +114,13 @@ class Migrate extends Cli {
 
             const executeMySql = (migration, file) => {
                 return this.createTableOrUpdate(migration).then(() =>
-                    Migrate.DB.insertValue('migrations', ['name'], [file.getFileName()])
+                    Migrate.DB.insertValue('migrations', ['name'], [file.getRelativePath()])
                 );
             };
 
             return this.files.reduce((promiseChain, originalFile) => {
                 return promiseChain.then(() => {
-                    if (names.includes(originalFile.getFileName())) {
+                    if (names.includes(originalFile.getRelativePath())) {
                         return;
                     }
 
