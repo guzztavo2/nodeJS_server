@@ -36,7 +36,7 @@ class Utils {
         
         if(typeof data === "string") return data.trim().length === 0;
 
-        if(this.isArray(data)) return data.length === 0;
+        if(Utils.isArray(data)) return data.length === 0;
 
         if (typeof data === "object") return Object.keys(data).length === 0;
 
@@ -60,7 +60,7 @@ class Utils {
     }
 
     static isArray(data){
-        return this.isClass(data, Array);
+        return Utils.isClass(data, Array);
     }
 
     static defineGlobal(name, callback){

@@ -3,30 +3,28 @@ import crypto from 'node:crypto';
 
 class Encrypt {
     salt_round = 10
-    bcrypt;
-
-    constructor() {
-        this.bcrypt = bcrypt;
-    }
+    
+    static bcrypt = bcrypt;
+    static crypto = crypto;
 
     crypt(value) {
         return new Promise((resolve, reject) => {
             try {
-                this.bcrypt.hash(value, this.salt_round).then(response => resolve(response))
+                Encrypt.bcrypt.hash(value, this.salt_round).then(response => resolve(response))
             } catch (e) {
                 reject(e);
             }
         })
     }
-
-    static crypt_(value) {
+    
+    static crypt(value) {
         return new Encrypt().crypt(value);
     }
 
     check(value, value_1) {
         return new Promise((resolve, reject) => {
             try {
-                bcrypt.compare(value, value_1, (err, result) => {
+                Encrypt.bcrypt.compare(value, value_1, (err, result) => {
                     if (err) throw (err);
                     resolve(result);
                 });
@@ -40,7 +38,15 @@ class Encrypt {
     }
 
     static generateString(size = 20) {
-        return crypto.randomBytes(size).toString('hex').slice(0, size);
+        return Encrypt.crypto.randomBytes(size).toString('hex').slice(0, size);
+    }
+
+    hash(type = 'sha1'){
+        return Encrypt.hash(type);
+    }
+    
+    static hash(type = 'sha1'){
+        return Encrypt.crypto.createHash(type);
     }
 }
 

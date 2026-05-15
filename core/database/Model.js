@@ -250,7 +250,7 @@ class Model {
                 values.push(null);
             else
                 if (this.keyIsHidden(key))
-                    values.push(await Encrypt.crypt_(object[key]));
+                    values.push(await Encrypt.crypt(object[key]));
                 else if (keyCast !== false) {
                     if (keyCast == 'object')
                         values.push(JSON.stringify(object[key]))

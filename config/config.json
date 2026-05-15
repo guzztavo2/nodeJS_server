@@ -1,13 +1,22 @@
 {
-  "controllers": "app/controllers",
+  "controllers": "app/controllers/Http",
   "middlewares": "app/middlewares",
   "models": "app/models",
-  "routes": "app/routes",
+  "routes": "app/routes/Http/",
   "migrations": "database/migrations",
   "storage": "storage",
-  "websockets": true,
+  "websockets_": true,
+  "websocket_routes": "app/routes/WebSocket/websocket.json",
+  "websocket_maxPayload": 1048576,
+  "websocket_handshakeTimeoutMs": 5000,
   "requestLimiter": {
     "windowMs": 60000,
-    "max": 20
+    "max": 20,
+    "standardHeaders": "draft-8",
+    "legacyHeaders": false,
+    "message": {
+      "status": 429,
+      "error": "Too many requests, please try again later."
+    }
   }
 }

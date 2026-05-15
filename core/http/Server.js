@@ -32,6 +32,7 @@ class Server {
             () => this.create(),
             () => this.initializeRoutes(),
             () => this.initConfigServer(),
+            () => this.initializeWebSocket(),
             () => this.migrationTable()
         ].reduce((p, v) => {
             return p.then(() => v())
@@ -122,10 +123,6 @@ class Server {
     }
 
     initConfigServer() {
-        this.serverUse(() => {
-            Log.error("Page not found");
-            Response.error(404, 'Page Not Found')
-        })
         this.serverUseError((err, httpRequest, httpResponse) => {
             Log.error(err.stack || err);
             Response.error(500, { "title": "Internal Server Error" });
@@ -134,7 +131,6 @@ class Server {
         this.server_listenner = this.server.listen(Application.Env.getEnvConfigurations().APP_PORT,
             Application.Env.getEnvConfigurations().APP_URL, (err) => {
                 if (err) throw (err);
-
                 Log.log("Server Started | http://" + Application.Env.getEnvConfigurations().APP_URL + ":" + Application.Env.getEnvConfigurations().APP_PORT);
             });
 
@@ -151,7 +147,9 @@ class Server {
     securityPass() {
         this.server.use(helmet.contentSecurityPolicy({
             directives: {
+                // "default-src": ["'self'"],
                 "script-src": ["'self'", "code.jquery.com", "cdn.jsdelivr.net"],
+                // "connect-src": ["'self'", "ws://localhost:3000"]
             }
         }));
         this.server.use(helmet.frameguard({ action: 'deny' }));
@@ -161,10 +159,20 @@ class Server {
 
     requestLimiter() {
         return this.container.make("Config")
-            .then(config => config.get("requestLimiter").then(requestLimiter => this.server.use(RateLimit({
-                windowMs: requestLimiter['windowMs'],
-                max: requestLimiter['max']
-            }))));
+            .then(config => config.get("requestLimiter").then(requestLimiter =>
+                this.server.use(RateLimit({
+                    windowMs: requestLimiter['windowMs'],
+                    max: requestLimiter['max'],
+                    standardHeaders: requestLimiter["standardHeaders"],
+                    legacyHeaders: requestLimiter["legacyHeaders"],
+                    message: {
+                        status: requestLimiter['message']["status"],
+                        error: requestLimiter['message']["error"]
+                    },
+                }))
+
+            )
+            );
     }
 
     migrationTable() {
@@ -179,5 +187,14 @@ class Server {
         });
 
     }
+
+    initializeWebSocket() {
+        this.server_listenner.on("upgrade", (httpReq, httpSocket, httpHead) => {
+            return File("core/websocket/Router.js").importJSFile().then(Router => {
+                return Router.handleUpgrade(httpReq, httpSocket, httpHead);
+            });
+        });
+    }
+
 }
 export default Server;
