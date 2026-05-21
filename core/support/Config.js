@@ -1,5 +1,5 @@
 import Utils from '#core/support/Utils.js';
-
+import File from '#core/filesystems/File.js';
 class Config {
    static config_file_path = "/config/config.json";
    static file;
@@ -10,13 +10,13 @@ class Config {
    }
 
    static get(keys, force = false) {
-      if (empty(Config.file))
-         Config.file = File(Config.config_file_path);
+      if (Utils.isEmpty(Config.file))
+         Config.file = new File(Config.config_file_path);
       if (Config.data_file & !force) {
          return new Promise((resolve, reject) => {
             if (Utils.isArray(keys))
                return resolve(keys.reduce((acc, key_) => {
-                  if (!empty(Config.data_file[key_]))
+                  if (!Utils.isEmpty(Config.data_file[key_]))
                      acc[key_] = Config.data_file[key_]
                   return acc;
                }, {}));
@@ -31,7 +31,7 @@ class Config {
          file = JSON.parse(file);
          if (Utils.isArray(keys))
             return keys.reduce((acc, key_) => {
-               if (!empty(file[key_])) {
+               if (!Utils.isEmpty(file[key_])) {
                   acc[key_] = file[key_];
                }
                return acc;

@@ -9,7 +9,7 @@ class Middleware {
     static initPromise;
 
     static ready() {
-        return Config.get("middlewares").then(middlewarePath => {
+        return Config.get("http_midlewares_directory").then(middlewarePath => {
             this.middleware_directory = new Directory(middlewarePath)
             return Promise.resolve(this);
         });
@@ -51,7 +51,6 @@ class Middleware {
                     });
                 });
         })
-
     }
 
     next(httpRequest, httpResponse, next) {

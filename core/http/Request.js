@@ -9,9 +9,9 @@ class Request {
     static httpRequest;
     initPromise;
 
-    constructor() {
+    constructor(httpRequest = false) {
+        Request.setHttpRequest(httpRequest);
         this.session = new Session();
-
         this.requests = new Collection(Object.assign(
             Request.httpRequest.body || {},
             Request.httpRequest.params || {},
@@ -20,10 +20,11 @@ class Request {
     }
 
     static setHttpRequest(httpRequest = false) {
-        if (httpRequest) {
-            Request.httpRequest = httpRequest;
-            Response.httpResponse = httpRequest.res;
-        }
+        if (!httpRequest)
+            return;
+
+        Request.httpRequest = httpRequest;
+        Response.httpResponse = httpRequest.res;
     }
 
     httpRequest() {

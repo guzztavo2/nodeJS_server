@@ -98,6 +98,7 @@ class MainCLI extends Cli {
 
         configurationsMenu.submenus.push(menuMigration);
     }
+
     findMenu(name, menus = this.menus) {
         for (const menu of menus) {
             if (menu.submenus && !empty(menu.submenus)) {
@@ -210,6 +211,7 @@ class MainCLI extends Cli {
             selectionsFinal[indexActive].active = true;
         }
     }
+
     async renderMenu(menus = this.menus, callbackBeforeRender = null, callAfterRender = null) {
         while (true) {
             Cli.clearConsole();
@@ -288,7 +290,11 @@ class MainCLI extends Cli {
     }
 
     handle() {
-        return MainCLI.application.startServer();
+        // this.exercise3();
+        return MainCLI.application.ready().then(() => {
+            return MainCLI.application.startServer();
+
+        })
     }
 
     menu() {
@@ -338,33 +344,6 @@ class Menu {
 }
 
 new MainCLI();
-// container.bind(null, () => new Application())
-//     .then(container.bind(null, () => new Element()))
-//     .then(res => {
-//         console.log(container);
-//     })
-
-// const collection = new Collection();
-
-// const values = Array(4).fill(() => new Application());
-
-// values.reduce((p, v) => p.then(() => collection.add(v)), Promise.resolve()).then(() => {
-//     return collection.get([1,2,3,4,5]).then(el => {
-//         console.log(el);
-//     });
-//     console.log(item);
-// })
-//     Promise.all([
-//     collection.add(() => new Application()),
-//     collection.add(() => new Application()),
-//     collection.add(() => new Application())
-// ])
-//     .then(res => {
-//         collection.first().then(element => {
-//             console.log(element);
-//         })
-//     })
-
 
 function drawBar(height = 1) {
     return new Promise(res => {
@@ -488,27 +467,6 @@ function centerText(text) {
                 Log.write("\n");
         }));
 }
-
-// const file = new File("menu_lang.json", "./config");
-// Application.Env.init().then(env => {
-//     console.log(env);
-//     file.readData(true).then(langs => {
-//         console.log(langs);
-//     })
-// })
-
-// drawBar(2).reduce((p, v) => p.then());
-// drawBar(2).then(_ => {
-// return centerText("Bem vindo ao servidor!").then(_ => {
-// return centerText(`Pariatur minim tempor pariatur labore anim anim exercitation id esse. Consequat sint ipsum laborum ut aute excepteur. Officia ut voluptate minim consectetur tempor ad sunt ex esse exercitation ea. Et minim ut elit enim quis nisi dolor excepteur occaecat et ea. Incididunt duis veniam irure qui id quis ad excepteur commodo anim non.Magna ea consequat velit minim incididunt nostrud mollit duis Lorem occaecat aute enim ad cillum. Mollit consequat minim aute aliqua ea nisi fugiat nulla est quis quis. Officia tempor qui sit irure fugiat consequat nisi adipisicing. Aliquip nulla duis ea et veniam id consequat duis ex exercitation dolore. Eiusmod laborum adipisicing quis velit mollit irure adipisicing et quis in voluptate.
-// Proident enim fugiat minim tempor. Excepteur proident est anim ad tempor aliquip magna et tempor. Anim occaecat est sit sunt eu sint fugiat eiusmod cillum amet ut cupidatat. Incididunt minim sunt qui mollit sit irure.`);
-
-// })
-// centerText("Olá mundo!");
-
-
-// });
-
 
 const readKey = () => {
     return Cli.readyKey(key => {

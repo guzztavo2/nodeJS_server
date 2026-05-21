@@ -20,7 +20,7 @@ class Env {
 
          return Promise.resolve(data);
       }).then(data => Env.env_file.readData()
-      .then(res => empty(res) ?
+      .then(res => Utils.isEmpty(res) ?
          Env.env_file.writeFile(data, false) : Promise.resolve())
          .then(_ => this.generateAppSecret())
          .then(_ => this.synchronizeDotEnv()))
@@ -74,13 +74,13 @@ class Env {
          'DB_NAME': process.env.DB_NAME ?? null,
          'LANGUAGE_': process.env.LANGUAGE_ ?? null
       }
-      if (empty(this.env_configurations.APP_NAME) &&
-         empty(this.env_configurations.APP_SECRET) &&
-         empty(this.env_configurations.APP_URL) &&
-         empty(this.env_configurations.APP_PORT) &&
-         empty(this.env_configurations.DB_TYPE) &&
-         empty(this.env_configurations.APP_DEBUG) &&
-         empty(this.env_configurations.APP_ENV)) {
+      if (Utils.isEmpty(this.env_configurations.APP_NAME) &&
+         Utils.isEmpty(this.env_configurations.APP_SECRET) &&
+         Utils.isEmpty(this.env_configurations.APP_URL) &&
+         Utils.isEmpty(this.env_configurations.APP_PORT) &&
+         Utils.isEmpty(this.env_configurations.DB_TYPE) &&
+         Utils.isEmpty(this.env_configurations.APP_DEBUG) &&
+         Utils.isEmpty(this.env_configurations.APP_ENV)) {
          Env.synchronizeDotEnv();
          return this.synchronizeDotEnv();
       }

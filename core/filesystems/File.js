@@ -13,6 +13,13 @@ class File {
         this.setPath(path);
     }
 
+    static from(fileName, path = null){
+        const file = new File(fileName, path);
+        if(!file.exists())
+            return false;
+        return file;
+    }
+
     getFileName() {
         return this.fileName;
     }
@@ -50,7 +57,7 @@ class File {
         const fileNameSplited = this.fileName.split("/");
 
         if (fileNameSplited.filter(val => val && val.length > 1).length == 1)
-            this.path = new Directory(path.includes(this.fileName) ? path.substr(0, path.lastIndexOf(this.fileName)) :path);
+            this.path = new Directory(path.includes(this.fileName) ? path.substr(0, path.lastIndexOf(this.fileName)) : path);
         else {
             this.fileName = fileNameSplited.pop();
             this.path = new Directory(fileNameSplited.join('/'));

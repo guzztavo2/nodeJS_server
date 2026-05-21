@@ -13,30 +13,12 @@ class WebSocket {
         // });
     }
 
-    validateWebSocket() {
-        if (this.httpRequest.headers['upgrade'] != 'websocket' || this.httpRequest.headers['sec-websocket-version'] !== '13' || empty(WebSocket.getWebSocketKey())) {
-            return false, WebSocket.generateResponseError();
-        }
+    static generateAcceptKey(key) {
+        return Encrypt.hash('sha1').update(key + WebSocket.WEB_SOCKET_CODE).digest('base64');
     }
 
-    static generateResponseError(error = "Upgrade de requisição não identificado") {
-        return "HTTP/1.1 400 BadRequest\r\n" +
-            "Content-Type: text/plain\r\n" + "Connection: close\r\n\r\n" + error;
-    }
-
-    generateResponseUpgrade() {
-        return "HTTP/1.1 101 Switching Protocols\r\n" +
-            "Upgrade: websocket\r\n" +
-            "Connection: Upgrade\r\n" +
-            `Sec-WebSocket-Accept: ${this.generateAcceptKey()}\r\n\r\n`;
-    }
-
-    generateAcceptKey() {
-        return Encrypt.hash('sha1').update(this.getWebSocketKey() + WebSocket.WEB_SOCKET_CODE).digest('base64');
-    }
-
-    getWebSocketKey() {
-        return this.httpRequest.headers['sec-websocket-key'];
+    static getWebSocketKey(httpRequest) {
+        return httpRequest.headers['sec-websocket-key'];
     }
 
     static decodeFrame(buffer) {

@@ -6,12 +6,12 @@ import Middleware from "#core/http/Middleware.js";
 import Storage from "#core/filesystems/Storage.js";
 import Utils from "#core/support/Utils.js";
 
-class Route {
+class Router {
     directory;
     routes = new Collection();
 
     constructor() {
-        this.initPromise = Config.get("routes").then(directory => {
+        this.initPromise = Config.get("http_routes_directory").then(directory => {
             this.directory = new Directory(directory);
         }).then(_ => this.readFilesRoutes()).then(_ => this);
     }
@@ -23,21 +23,14 @@ class Route {
     readFilesRoutes() {
         return this.routes.ready().then(() => {
             return this.directory.readDirectory().then(collection => collection.getLength()
-                .then(len => {
-                    if (len == 0)
-                        return false;
-                    return collection;
-                }))
-                .then(collection => collection.filter(val => val instanceof File))
+                .then(len => len == 0 ? false : collection))
+                .then(collection => collection.filter(file => file instanceof File))
                 .then(collection => {
-                    const tasks = collection.map(val => {
-                        const file = val;
-                        const route = file.getFileNameNoExt();
-
+                    const tasks = collection.map(file => {
                         return file.readData(true).then(data => {
                             if (!empty(data))
-                                this.routes.add(JSON.parse(data), route);
-                            return val;
+                                this.routes.add(JSON.parse(data), file.getFileNameNoExt());
+                            return file;
                         });
                     });
 
@@ -129,4 +122,4 @@ class Route {
         return disksResults;
     }
 }
-export default Route;
+export default Router;

@@ -1,14 +1,18 @@
 {
   "controllers": "app/controllers/Http",
-  "middlewares": "app/middlewares",
+  "http_midlewares_directory": "app/middlewares/Http",
   "models": "app/models",
-  "routes": "app/routes/Http/",
+  "http_routes_directory": "app/routes/Http/",
   "migrations": "database/migrations",
   "storage": "storage",
-  "websockets_": true,
+
+  "websocket_": true,
   "websocket_routes": "app/routes/WebSocket/websocket.json",
   "websocket_maxPayload": 1048576,
   "websocket_handshakeTimeoutMs": 5000,
+  "websocket_middlewares_directory": "app/middlewares",
+  "websocket_controller_directory": "app/controllers/websocket",
+
   "requestLimiter": {
     "windowMs": 60000,
     "max": 20,
@@ -18,5 +22,11 @@
       "status": 429,
       "error": "Too many requests, please try again later."
     }
-  }
+  },
+  "helpers_directory": "core/helpers",
+  "helpers_list": [
+    "ApplicationHelpers.js",
+    "HttpHelpers.js",
+    "WebSocketHelpers.js"
+  ]
 }

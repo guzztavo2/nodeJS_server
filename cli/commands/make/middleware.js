@@ -5,7 +5,7 @@ class createMiddleware extends Cli {
     fileMiddleware;
 
     initializeMiddlewaresPath() {
-        return Config().get("middlewares").then(middleware_path => {
+        return Config().get("http_midlewares_directory").then(middleware_path => {
             this.path = middleware_path;
             this.middlewareDirectory = Directory(this.path);
         });

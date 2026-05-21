@@ -12,7 +12,7 @@ import Utils from '#core/support/Utils.js';
 import Log from '#core/support/Log.js';
 import Application from '#core/Application.js';
 import Container from '#core/container/Container.js';
-
+import Router from '#core/websocket/connection/Router.js';
 const upload = multer();
 
 class Server {
@@ -189,10 +189,10 @@ class Server {
     }
 
     initializeWebSocket() {
-        this.server_listenner.on("upgrade", (httpReq, httpSocket, httpHead) => {
-            return File("core/websocket/Router.js").importJSFile().then(Router => {
-                return Router.handleUpgrade(httpReq, httpSocket, httpHead);
-            });
+        this.server_listenner.on("upgrade", (httpRequest, httpSocket, httpHead) => {
+            const [request, socket] = [global.request(httpRequest), new (global.socket())(httpSocket)];
+            return Router.handleUpgrade(httpRequest, httpSocket, httpHead);
+
         });
     }
 

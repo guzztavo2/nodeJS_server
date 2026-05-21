@@ -1,0 +1,22 @@
+[
+    {
+        "path": "/",
+        "controller": "InitialController.js",
+        "middlewares": []
+    },
+    {
+        "path": "/ws/chat",
+        "controller": "ChatController.js",
+        "middlewares": []
+    },
+    {
+        "path": "/ws/notifications",
+        "controller": "NotificationController.js",
+        "middlewares": []
+    },
+    {
+        "path": "/ws/echo",
+        "controller": "EchoController.js",
+        "middlewares": []
+    }
+]

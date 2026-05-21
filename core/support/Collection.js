@@ -15,7 +15,7 @@ class Collection {
 
     getLength() {
         return this.ready().then(collection => {
-            if (!empty(this.quantity))
+            if (!Utils.isEmpty(this.quantity))
                 return this.quantity;
             return collection.collection.length;
         })
@@ -44,19 +44,19 @@ class Collection {
             const data = new TypeCollection(index, value);
             this[index] = data;
             this.collection.push(data);
-            if (!empty(oldIndex))
+            if (!Utils.isEmpty(oldIndex))
                 this.keyMap[index] = oldIndex;
 
             this.collection_len = (this.collection_len || 0) + 1;
         };
 
-        if (!empty(key) && !this.keys_not_avaible.includes(key) && !empty(this.collection[key]))
+        if (!Utils.isEmpty(key) && !this.keys_not_avaible.includes(key) && !Utils.isEmpty(this.collection[key]))
             createValue(value, key);
         else {
-            let newIndex = !empty(key) ? key + "_" : 0;
+            let newIndex = !Utils.isEmpty(key) ? key + "_" : 0;
             let whileKey = 0;
             while (true) {
-                if (empty(this.collection[newIndex + whileKey])) {
+                if (Utils.isEmpty(this.collection[newIndex + whileKey])) {
                     newIndex = newIndex + whileKey;
                     break;
                 }
@@ -107,7 +107,7 @@ class Collection {
     filter(func_) {
         const collectionFiltered = new Collection();
         return this.map((val, key) => {
-            key = !empty(this.keyMap[key]) ? this.keyMap[key] : key;
+            key = !Utils.isEmpty(this.keyMap[key]) ? this.keyMap[key] : key;
             return Promise.resolve(func_(val, key)).then(res => {
                 if (res)
                     collectionFiltered.add(val, key);
@@ -117,7 +117,7 @@ class Collection {
 
     map(func_, getValue = true) {
         const promises = this.collection.map((item, i) => {
-            i = !empty(this.keyMap[item.getKey()]) ? this.keyMap[item.getKey()] : item.getKey();
+            i = !Utils.isEmpty(this.keyMap[item.getKey()]) ? this.keyMap[item.getKey()] : item.getKey();
             const resultFunc = func_(getValue ? item.getValue() : item, i);
             return resultFunc instanceof Promise ? resultFunc : Promise.resolve(resultFunc);
         });
